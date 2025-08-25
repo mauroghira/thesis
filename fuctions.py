@@ -7,6 +7,7 @@ import os
 from scipy.signal import find_peaks
 from scipy.spatial import KDTree
 import csv
+from scipy.ndimage import map_coordinates
 
 #############
 #===========================================================
@@ -27,6 +28,7 @@ def read(arg):
         image = image_data[0, 0, 0, :, :]  # select first frame
         label = "Flux [W/(m⁻² pixel⁻¹)]"
         pixel_size = 300/image.shape[0] # AU
+        image = deproject_image(image, 15)
 
     #for the hydrodynamical simulations give the path massratio filename
     elif len(arg)==3:
@@ -42,6 +44,34 @@ def read(arg):
         sys.exit(1)
 
     return  outfile, image, label, pixel_size
+
+
+#############
+#===========================================================
+############# function to deproject the image
+def deproject_image(image, inc_deg):
+    """
+    l'immagine è giusta se moltiplico per coseno.. non so perché hahah
+    """
+    inc_rad = np.deg2rad(inc_deg)
+    # Create coordinate grid
+    ny, nx = image.shape
+    y, x = np.indices((ny, nx))
+    x0, y0 = nx / 2, ny / 2
+    x = x - x0
+    y = y - y0
+
+    # Deproject: stretch y axis by 1/cos(inc)
+    y_deproj = y * np.cos(inc_rad)
+    # Map back to pixel coordinates
+    x_new = x + x0
+    y_new = y_deproj + y0
+
+    # Interpolate the image at new coordinates
+    coords = np.array([y_new.flatten(), x_new.flatten()])
+    deproj_img = map_coordinates(image, coords, order=1, mode='nearest').reshape(image.shape)
+
+    return deproj_img
 
 
 #############
@@ -212,6 +242,7 @@ def plot_neighbors(xy_neighbors, image, pixel_size, label, path=""):
     
     fig = plt.figure(figsize=(10, 10))
     plt.scatter(scaled_neighbors[:, 0], scaled_neighbors[:, 1], color="lime", s=10, edgecolor="k", label="Single spial arm")
+    #plt.plot(scaled_neighbors[:, 0], scaled_neighbors[:, 1], '-', color="lime", label="Single spial arm")
     plt.imshow(image, cmap="inferno", origin="lower", extent=extent)
     plt.colorbar(label=label)
     plt.title("Spiral Pattern")
