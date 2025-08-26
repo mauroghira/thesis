@@ -28,7 +28,7 @@ def read(arg):
         image = image_data[0, 0, 0, :, :]  # select first frame
         label = "Flux [W/(m⁻² pixel⁻¹)]"
         pixel_size = 300/image.shape[0] # AU
-        image = deproject_image(image, 15)
+        image = deproject_image(image, 0)
 
     #for the hydrodynamical simulations give the path massratio filename
     elif len(arg)==3:
@@ -122,6 +122,7 @@ def neig(cart_points, size, bound=1, max_dr=1, start="b",
     max_idx_local = np.argmax(points[partial_ix, 0])
     current_idx = partial_ix[max_idx_local]
     mean_r = np.mean(points[:, 0])
+    min_r = np.min(points[:, 0])
 
     listed = set([current_idx])  # mark start as visited to avoid revisiting
 
@@ -140,7 +141,7 @@ def neig(cart_points, size, bound=1, max_dr=1, start="b",
             # 3) enforce maximum radial step
             if np.isfinite(max_dr):
                 r0 = points[current_idx][0]
-                cand = [i for i in cand if abs(points[i, 0] - r0) <= max_dr]
+                cand = [i for i in cand if ((r0 - points[i, 0]) >= 0 and (r0 - points[i, 0]) <= max_dr) or ((r0 - points[i, 0]) < 0 and (points[i, 0] - r0) <= max_dr/2)]
 
             # 4) check for counterclockwise wrapping
             phi0 = points[current_idx, 1]
@@ -198,7 +199,7 @@ def angle_diff(phi_new, phi_old):
 
 def xy_to_rphi(rows, cols, size):
     # Convert pixel coordinates to R-phi coordinates
-    ny, nx = size, size
+    ny, nx = size-1, size-1
     x0, y0 = nx / 2, ny / 2
     x = cols - x0
     y = rows - y0
@@ -211,8 +212,8 @@ def xy_to_rphi(rows, cols, size):
 def rphi_to_xy(scaled_neighbors, size):
     # conversion from polar to cartesian coordinates
     r, phi = scaled_neighbors[:, 0], scaled_neighbors[:, 1]
-    x = r * np.cos(phi) + size / 2
-    y = r * np.sin(phi) + size / 2
+    x = r * np.cos(phi) + (size-1) / 2
+    y = r * np.sin(phi) + (size-1) / 2
 
     return x, y
 
@@ -222,7 +223,7 @@ def rphi_to_xy(scaled_neighbors, size):
 ############# function to plot the original image or the peaks
 
 def plot_image(image, pixel_size, label, path=""):
-    extent = [-image.shape[1] * pixel_size/2, image.shape[1] * pixel_size/2, -image.shape[1] * pixel_size/2, image.shape[0] * pixel_size/2]
+    extent = [-(image.shape[1]-1) * pixel_size/2, (image.shape[1]-1) * pixel_size/2, -(image.shape[0]-1) * pixel_size/2, (image.shape[0]-1) * pixel_size/2]
     plt.figure(figsize=(10, 10))
     plt.imshow(image, cmap="inferno", origin="lower", extent=extent)
     plt.colorbar(label=label)
@@ -238,7 +239,7 @@ def plot_image(image, pixel_size, label, path=""):
 
 def plot_neighbors(xy_neighbors, image, pixel_size, label, path=""):
     scaled_neighbors = (xy_neighbors-image.shape[0]/2) * pixel_size
-    extent = [-image.shape[1] * pixel_size/2, image.shape[1] * pixel_size/2, -image.shape[1] * pixel_size/2, image.shape[0] * pixel_size/2]
+    extent = [-(image.shape[1]-1) * pixel_size/2, (image.shape[1]-1) * pixel_size/2, -(image.shape[0]-1) * pixel_size/2, (image.shape[0]-1) * pixel_size/2]
     
     fig = plt.figure(figsize=(10, 10))
     plt.scatter(scaled_neighbors[:, 0], scaled_neighbors[:, 1], color="lime", s=10, edgecolor="k", label="Single spial arm")

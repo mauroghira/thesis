@@ -15,7 +15,7 @@ while True:
     print("______")
     print("    find h   //find the points above the threshold h")
     print("    track d  //track the points within a distance d")
-    print("    save n   //save R-phi data of the spiral arm")
+    print("    save n   //save R-phi data of the spiral arm at time n")
     print("")
     print("    plot 0   // plot the original image")
     print("    plot 1   // plot the spiral arms found")
@@ -62,8 +62,9 @@ while True:
         except NameError:
             print("No spiral arms found. Please run 'track d' first.")
             continue
-        name = input("filename> ")
-        save_rphi(rphi_neighbors, outfile+name, st_point, pixel_size)
+        name = input("top/bot> ")
+        file = outfile+str(val)+"_"+name+".txt"
+        save_rphi(rphi_neighbors, file, st_point, pixel_size)
 
     elif cmd == "plot":
         val = int(val)

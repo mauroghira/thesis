@@ -12,16 +12,25 @@ dir = sys.argv[1]
 arm = sys.argv[2]
 
 all_data = read_mult(dir, arm)
-interp_data = int_all(all_data)
 
-smooth_data = smooth(interp_data)
+#sm_r_data = smooth(all_data, 0)
+sm_r_data = sort_and_monotonic_smooth(all_data)
 
-velocities = compute_velocity(smooth_data)
+#plot_all_r_phi(sm_r_data, "Smoothed data")
+#plot_all_r_phi(all_data, "original data")
+#plt.show()
+
+interp_data = int_all(all_data, n=100)
+
+#smooth_data = smooth(interp_data, 1)
+
+#plt.plot(sm_r_data[0][:, 1], sm_r_data[0][:, 0], label=f'Smoothed')
+#plt.plot(interp_data[0][:, 0], interp_data[0][:, 1], label=f'Interpolated')
+#plot_all_phi_r(smooth_data, "Smoothed data")
+plot_all_phi_r(interp_data, "Interpolated data")
+#plt.show()
+
+velocities = compute_velocity(interp_data, dt=1)
+#save_vel(velocities)
 
 plot_vel(velocities)
-
-#plt.plot(smooth_data[0][:, 0], smooth_data[0][:, 1], label=f'Smoothed')
-#plt.plot(interp_data[0][:, 0], interp_data[0][:, 1], label=f'Interpolated')
-#plot_all(smooth_datam, "Smoothed data")
-#plot_all(interp_data, "Interpolated data")
-#plt.show()
