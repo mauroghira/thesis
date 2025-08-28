@@ -8,6 +8,7 @@ from scipy.signal import find_peaks
 from scipy.spatial import KDTree
 import csv
 from scipy.ndimage import map_coordinates
+from scipy.ndimage import maximum_filter
 
 #############
 #===========================================================
@@ -77,108 +78,83 @@ def deproject_image(image, inc_deg):
 #############
 #===========================================================
 ############# function to find the spiral arms in the image
-
-def spiral_finder(image, hh):
-    peaks = []
-    # Find peaks in the image data
-    for i in range(image.shape[0]):
-        peaks_in_one_trace, _ = find_peaks(image[i, :], height=hh)
-        
-        # Store peaks for each trace
-        if peaks_in_one_trace.size > 0:
-            for p in peaks_in_one_trace:
-                peaks.append((i, p))
-
-    return np.array(peaks)
+def find_2d_peaks(image, threshold=0):
+    # Apply a maximum filter to find local maxima
+    neighborhood = np.ones((3, 3))
+    local_max = (image == maximum_filter(image, footprint=neighborhood))
+    detected_peaks = np.argwhere(local_max & (image > threshold))
+    return detected_peaks
 
 
 #############
 #===========================================================
-############# function to isolate one spiral arm
+############# function to select an arm
+def filter_peaks_by_rphi(peaks, image_size, px_size, r_min=0, r_max=100, phi_min=-90, phi_max=90, lim=3):
+    """
+    Filter peaks by polar coordinate conditions.
+    peaks: array of (row, col) pixel coordinates
+    image_size: size of the image (assumed square)
+    r_min, r_max: min/max radius (in AU)
+    phi_min, phi_max: min/max angle (in deg)
+    Returns: filtered array of peaks (pixel coordinates)
+    """
 
-def neig(cart_points, size, bound=1, max_dr=1, start="b",
-           bound_step=0.1, max_expansions=50):
-    verbose=False
- 
-    r, phi = xy_to_rphi(cart_points[:, 0], cart_points[:,1], size)
-    points = np.column_stack((r, phi))
+    phi_max = np.deg2rad(phi_max)
+    phi_min = np.deg2rad(phi_min)
+    r_min = r_min / px_size
+    r_max = r_max / px_size
 
-    tree = KDTree(cart_points)
+    rows, cols = peaks[:, 0], peaks[:, 1]
+    r, phi = xy_to_rphi(rows, cols, image_size)
+    
+    # to properly track the spiral arm from the top
+    if phi_max > np.pi:
+        phi = (phi + 2*np.pi) % (2*np.pi)
 
-    # choose start half and map back to global indices
-    if start == "b":
-        partial_ix = np.nonzero(points[:, 1] < 0)[0]
-    elif start == "t":
-        partial_ix = np.nonzero(points[:, 1] > 0)[0]
-    else:
-        print("Invalid start point. Use 'b' for bottom or 't' for top.")
-        return None
+    mask = np.ones_like(r, dtype=bool)
+    if r_min < r_max:
+        mask &= (r >= r_min)
+        mask &= (r <= r_max)
+    if phi_min < phi_max:
+        mask &= (phi >= phi_min)
+        mask &= (phi <= phi_max)
+    partial = peaks[mask]
 
-    if partial_ix.size == 0:
-        print("No points in the selected half.")
-        return None
+    # Sort peaks by increasing phi (counterclockwise order)
+    r, phi = xy_to_rphi(partial[:, 0], partial[:, 1], image_size)
+    sort_idx = np.argsort(phi)
+    sorted_peaks = partial[sort_idx]
 
-    # pick the point with largest radius in that half
-    max_idx_local = np.argmax(points[partial_ix, 0])
-    current_idx = partial_ix[max_idx_local]
-    mean_r = np.mean(points[:, 0])
-    min_r = np.min(points[:, 0])
+    # Filter out points with radius too far from the average of their neighbors
+    filtered_peaks = []
+    r_sorted = r[sort_idx]
+    phi_sorted = phi[sort_idx]
 
-    listed = set([current_idx])  # mark start as visited to avoid revisiting
+    angular_window = np.deg2rad(10)  # set window size to 10deg
+    for i in range(len(sorted_peaks)):
+        # Get indices of neighbors where the angle difference is within the angular window
+        indices = [
+            j for j in range(len(sorted_peaks))
+            if j != i and abs(angle_diff(phi_sorted[j], phi_sorted[i])) <= angular_window
+        ]
+        
+        if not indices:
+            continue
 
-    while points[current_idx][0] > mean_r:
-        # choose a sane starting radius if user passed np.inf
-        temp_bound = bound if np.isfinite(bound) else bound_step
+        min_v = np.min([r_sorted[j] for j in indices])
+        max_v = np.max([r_sorted[j] for j in indices])
+        avg = (max_v+min_v)/2
+        dif = max_v - min_v
 
-        selected_indices = None
-        while True:
-            # 1) neighbors within current radius
-            ball = tree.query_ball_point(cart_points[current_idx], r=temp_bound)
-
-            # 2) drop already visited & self
-            cand = [i for i in ball if i not in listed and i != current_idx]
-
-            # 3) enforce maximum radial step
-            if np.isfinite(max_dr):
-                r0 = points[current_idx][0]
-                cand = [i for i in cand if ((r0 - points[i, 0]) >= 0 and (r0 - points[i, 0]) <= max_dr) or ((r0 - points[i, 0]) < 0 and (points[i, 0] - r0) <= max_dr/2)]
-
-            # 4) check for counterclockwise wrapping
-            phi0 = points[current_idx, 1]
-            cand = [i for i in cand if angle_diff(points[i,1], phi0) > 0]
-
-            if verbose:
-                print(f"[r={points[current_idx][0]:.3f}, phi={points[current_idx][1]:.3f}] "
-                      f"ball={len(ball)} after-visited={len(ball)-len([i for i in ball if i not in cand or i==current_idx])} "
-                      f"after-radial={len(cand)} (temp_bound={temp_bound:.3f})")
-
-            if cand:  # we have valid candidates after radial filtering
-                selected_indices = cand
-                break
-
-            # grow the radius; note this won’t “defeat” max_dr since that’s independent of temp_bound
-            temp_bound += bound_step
-            if temp_bound > max_expansions:
-                print("No neighbors satisfy conditions after many expansions — stopping.")
-                print(f"Total collected: {len(listed)}")
-                return points[list(sorted(listed))]
-
-        # add *all* found neighbors to the visited set (your requirement)
-        listed.update(selected_indices)
-
-        # step to the farthest candidate (in [r,phi] Euclidean space)
-        dists = np.linalg.norm(cart_points[selected_indices] - cart_points[current_idx], axis=1)
-        next_idx = selected_indices[int(np.argmax(dists))]
-
-        if verbose:
-            print(f"→ step to idx {next_idx}: point={points[next_idx]} dist={dists.max():.4f}\n")
-
-        # advance
-        current_idx = next_idx
-
-    print(f"Total collected: {len(listed)}")
-
-    return points[list(sorted(listed))]
+        if r_sorted[i] >= avg or dif <= (lim/px_size):
+            filtered_peaks.append(sorted_peaks[i])
+        else:
+            r_sorted[i] = r_sorted[i-1]
+            x, y = rphi_to_xy(r_sorted[i-1], phi_sorted[i], image_size)
+            sorted_peaks[i] = np.array(y,x)
+    #"""
+    
+    return np.array(filtered_peaks)
 
 
 #############
@@ -209,9 +185,7 @@ def xy_to_rphi(rows, cols, size):
 
     return r, phi
 
-def rphi_to_xy(scaled_neighbors, size):
-    # conversion from polar to cartesian coordinates
-    r, phi = scaled_neighbors[:, 0], scaled_neighbors[:, 1]
+def rphi_to_xy(r, phi, size):
     x = r * np.cos(phi) + (size-1) / 2
     y = r * np.sin(phi) + (size-1) / 2
 
@@ -238,12 +212,12 @@ def plot_image(image, pixel_size, label, path=""):
 ############# function to plot the spiral arm neighbors
 
 def plot_neighbors(xy_neighbors, image, pixel_size, label, path=""):
-    scaled_neighbors = (xy_neighbors-image.shape[0]/2) * pixel_size
+    scaled_neighbors = (xy_neighbors-(image.shape[0]-1)/2) * pixel_size
     extent = [-(image.shape[1]-1) * pixel_size/2, (image.shape[1]-1) * pixel_size/2, -(image.shape[0]-1) * pixel_size/2, (image.shape[0]-1) * pixel_size/2]
     
     fig = plt.figure(figsize=(10, 10))
-    plt.scatter(scaled_neighbors[:, 0], scaled_neighbors[:, 1], color="lime", s=10, edgecolor="k", label="Single spial arm")
-    #plt.plot(scaled_neighbors[:, 0], scaled_neighbors[:, 1], '-', color="lime", label="Single spial arm")
+    plt.scatter(scaled_neighbors[:, 1], scaled_neighbors[:, 0], color="lime", s=10, edgecolor="k", label="Single spial arm")
+    #plt.plot(scaled_neighbors[:, 1], scaled_neighbors[:, 0], '-', color="lime", label="Single spial arm")
     plt.imshow(image, cmap="inferno", origin="lower", extent=extent)
     plt.colorbar(label=label)
     plt.title("Spiral Pattern")
@@ -280,26 +254,15 @@ def plot_rphi_map(r, phi, peaks_size):
 #===========================================================
 ############# function to save the spiral arm
 
-def save_rphi(points, file, start, scale):
+def save_rphi(points, file, phimax, scale, size):
     #scaling radius
-    points[:, 0] = points[:, 0] * scale
+    r, phi = xy_to_rphi(points[:,0], points[:,1], size)
+    r = r * scale
 
-    test = points.copy()
     #if starting from the top, make the angle monotonous
-    if start=="t":
-        """
-        # method 1: loop
-        test1 = points.copy()
-        for i in range(test1.shape[0]):
-            if test1[i, 1] < 0:
-                test1[i, 1] += 2*np.pi
-        """
-        # method 2: vectorized
-        test[:, 1] = (test[:, 1] + 2*np.pi) % (2*np.pi)
+    if phimax > 180:
+        phi = (phi + 2*np.pi) % (2*np.pi)
 
-    # compare
-    #plot_rphi_map(test[:,0], test[:,1], False)
-    #plt.show()
-
+    data = np.column_stack((r,phi))
     with open(file, 'w') as f:
-        csv.writer(f, delimiter=' ').writerows(test)
+        csv.writer(f, delimiter=' ').writerows(data)

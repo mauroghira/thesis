@@ -11,26 +11,41 @@ if len(sys.argv) != 3:
 dir = sys.argv[1]
 arm = sys.argv[2]
 
-all_data = read_mult(dir, arm)
+dt = 10
 
-#sm_r_data = smooth(all_data, 0)
-sm_r_data = sort_and_monotonic_smooth(all_data)
+all_data = read_mult(dir, arm, dt)
+interp_R = []
 
-#plot_all_r_phi(sm_r_data, "Smoothed data")
-#plot_all_r_phi(all_data, "original data")
-#plt.show()
+for i, data in enumerate(all_data):
+    """per estermo
+    data = fill_phi_gaps(data)
+    data = filter_bads(data, -10, 30)
+    if i*dt == 10:
+        data = extrapolate_phi_in(data, 77, 100)
+    
+    """#per interno
+    if i*dt == 0:
+        data = extrapolate_phi_out(data, 42)
+    int_data = interp(data, np.min(data[:,0]), np.max(data[:,0]), 100, 0)
+    interp_R.append(int_data)
+    #"""
+    all_data[i] = data
 
-interp_data = int_all(all_data, n=100)
+    #data = fill_phi_gaps(data)
+    #data = filter_bads(data, 90, 135)
+    #data = smooth_int(data, 20, 28)
 
-#smooth_data = smooth(interp_data, 1)
+#plot_all_phi_r(all_data, "data")
 
-#plt.plot(sm_r_data[0][:, 1], sm_r_data[0][:, 0], label=f'Smoothed')
-#plt.plot(interp_data[0][:, 0], interp_data[0][:, 1], label=f'Interpolated')
-#plot_all_phi_r(smooth_data, "Smoothed data")
+#interp_R = int_all(all_data, n=100, i=1)
+
+#smooth_data = smooth(interp_R, 0)
+interp_data = int_all(interp_R, n=100, i=0)
+smooth_data = smooth(interp_data, 1)
+
+plot_all_phi_r(smooth_data, "Smoothed data")
 plot_all_phi_r(interp_data, "Interpolated data")
-#plt.show()
 
-velocities = compute_velocity(interp_data, dt=1)
-#save_vel(velocities)
+int_vel = compute_velocity(smooth_data, dt)
 
-plot_vel(velocities)
+plot_vel(int_vel)

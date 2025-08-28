@@ -8,6 +8,97 @@ from scipy.optimize import curve_fit
 from scipy.stats import binned_statistic
 from scipy.signal import find_peaks
 
+
+#############
+#===========================================================
+############# function to isolate one spiral arm
+
+def neig(cart_points, size, bound=1, max_dr=1, start="b",
+           bound_step=0.1, max_expansions=50):
+    verbose=False
+ 
+    r, phi = xy_to_rphi(cart_points[:, 0], cart_points[:,1], size)
+    points = np.column_stack((r, phi))
+
+    tree = KDTree(cart_points)
+
+    # choose start half and map back to global indices
+    if start == "b":
+        partial_ix = np.nonzero(points[:, 1] < 0)[0]
+    elif start == "t":
+        partial_ix = np.nonzero(points[:, 1] > 0)[0]
+    else:
+        print("Invalid start point. Use 'b' for bottom or 't' for top.")
+        return None
+
+    if partial_ix.size == 0:
+        print("No points in the selected half.")
+        return None
+
+    # pick the point with largest radius in that half
+    max_idx_local = np.argmax(points[partial_ix, 0])
+    current_idx = partial_ix[max_idx_local]
+    mean_r = np.mean(points[:, 0])
+    min_r = np.min(points[:, 0])
+
+    listed = set([current_idx])  # mark start as visited to avoid revisiting
+
+    while points[current_idx][0] > mean_r:
+        # choose a sane starting radius if user passed np.inf
+        temp_bound = bound if np.isfinite(bound) else bound_step
+
+        selected_indices = None
+        while True:
+            # 1) neighbors within current radius
+            ball = tree.query_ball_point(cart_points[current_idx], r=temp_bound)
+
+            # 2) drop already visited & self
+            cand = [i for i in ball if i not in listed and i != current_idx]
+
+            # 3) enforce maximum radial step
+            if np.isfinite(max_dr):
+                r0 = points[current_idx][0]
+                cand = [i for i in cand if ((r0 - points[i, 0]) >= 0 and (r0 - points[i, 0]) <= max_dr) or ((r0 - points[i, 0]) < 0 and (points[i, 0] - r0) <= max_dr/2)]
+
+            # 4) check for counterclockwise wrapping
+            phi0 = points[current_idx, 1]
+            cand = [i for i in cand if angle_diff(points[i,1], phi0) > 0]
+
+            if verbose:
+                print(f"[r={points[current_idx][0]:.3f}, phi={points[current_idx][1]:.3f}] "
+                      f"ball={len(ball)} after-visited={len(ball)-len([i for i in ball if i not in cand or i==current_idx])} "
+                      f"after-radial={len(cand)} (temp_bound={temp_bound:.3f})")
+
+            if cand:  # we have valid candidates after radial filtering
+                selected_indices = cand
+                break
+
+            # grow the radius; note this won’t “defeat” max_dr since that’s independent of temp_bound
+            temp_bound += bound_step
+            if temp_bound > max_expansions:
+                print("No neighbors satisfy conditions after many expansions — stopping.")
+                print(f"Total collected: {len(listed)}")
+                return points[list(sorted(listed))]
+
+        # add *all* found neighbors to the visited set (your requirement)
+        listed.update(selected_indices)
+
+        # step to the farthest candidate (in [r,phi] Euclidean space)
+        dists = np.linalg.norm(cart_points[selected_indices] - cart_points[current_idx], axis=1)
+        next_idx = selected_indices[int(np.argmax(dists))]
+
+        if verbose:
+            print(f"→ step to idx {next_idx}: point={points[next_idx]} dist={dists.max():.4f}\n")
+
+        # advance
+        current_idx = next_idx
+
+    print(f"Total collected: {len(listed)}")
+
+    return points[list(sorted(listed))]
+
+
+
 # Example dataset: random scatter + a "spiral arm"
 np.random.seed(0)
 random_points = np.random.rand(100, 2) * 10   # background noise
@@ -111,6 +202,21 @@ def vicini(points, size, bound=np.inf, start="b", neig=10):
     all_ind = np.unique(all_ind)
     vic = points[all_ind]
     return vic
+
+
+#wrong
+def spiral_finder(image, hh, tt=0):
+    peaks = []
+    # Find peaks in the image data
+    for i in range(image.shape[0]):
+        peaks_in_one_trace, _ = find_peaks(image[:, i], height=hh, threshold=tt)
+        
+        # Store peaks for each trace
+        if peaks_in_one_trace.size > 0:
+            for p in peaks_in_one_trace:
+                peaks.append((i, p))
+
+    return np.array(peaks)
 
 
 def read_fits_file(file_path):
@@ -396,3 +502,83 @@ plt.legend()
 plt.grid()
 #plt.savefig(outfile, bbox_inches="tight")
 plt.show()
+
+
+def sort_and_monotonic_smooth(data, smooth_window=15):
+    sm_dt = []
+    for sd_array in data:
+        # Sort by second column (ascending)
+        sorted_data = sd_array[sd_array[:, 1].argsort()]
+        
+        # Smooth the first column
+        smoothed_first = uniform_filter1d(sorted_data[:, 0], size=smooth_window, mode='nearest')
+        
+        # Make the first column monotonically decreasing
+        for i in range(1, len(smoothed_first)):
+            if smoothed_first[i] > smoothed_first[i-1]:
+                smoothed_first[i] = smoothed_first[i-1]
+        
+        sm_dt.append(np.column_stack((smoothed_first, sorted_data[:, 1])))
+    
+    return sm_dt
+
+
+def extrapolate_phi_local(points, r_cut, kind='linear', dr=None):
+    """
+    Extrapolate phi(r) for r > r_cut using only data at r <= r_cut.
+
+    points : (N,2) array of (r, phi) with phi in radians
+    r_cut  : float, cutoff radius
+    kind   : 'linear', 'quadratic', 'cubic', ...
+    dr     : if set, use only points with r in [r_cut - dr, r_cut]
+             (ignored if last_n is provided)
+
+    Returns: (N,2) array with phi replaced for r > r_cut
+    """
+    pts = np.asarray(points, dtype=float).copy()
+    if pts.ndim != 2 or pts.shape[1] != 2:
+        raise ValueError("points must be an (N,2) array of (r, phi)")
+
+    # sort by radius
+    order = np.argsort(pts[:, 0])
+    r = pts[order, 0]
+    phi = pts[order, 1]
+
+    # base mask: r <= r_cut
+    base = r <= r_cut
+    if not np.any(base):
+        raise ValueError("No points at or below r_cut")
+
+    if dr is not None:
+        idx_subset = np.where((r >= (r_cut - dr)) & (r <= r_cut))[0]
+    else:
+        idx_subset = np.where(base)[0]
+    
+    # need enough points for the chosen 'kind'
+    min_pts = {'linear': 2, 'nearest': 1, 'zero': 1,
+               'slinear': 2, 'quadratic': 3, 'cubic': 4}.get(kind, 2)
+    if idx_subset.size < min_pts:
+        raise ValueError(f"Need at least {min_pts} points for kind='{kind}', "
+                         f"but got {idx_subset.size}")
+
+    r_sub = r[idx_subset]
+    phi_sub = phi[idx_subset]
+
+    # interp1d needs strictly increasing x: ensure uniqueness
+    r_sub_unique, unique_idx = np.unique(r_sub, return_index=True)
+    phi_sub_unique = phi_sub[unique_idx]
+    if r_sub_unique.size < min_pts:
+        raise ValueError("After removing duplicate radii, not enough points remain.")
+
+    f = interp1d(r_sub_unique, phi_sub_unique, kind=kind,
+                 fill_value='extrapolate', assume_sorted=True)
+
+    # extrapolate for r > r_cut
+    mask_out = r > r_cut
+    phi[mask_out] = f(r[mask_out])
+
+    # place back in original order
+    out = np.empty_like(pts)
+    out[order, 0] = r
+    out[order, 1] = phi
+    return out

@@ -1,4 +1,3 @@
-from astropy.io import fits #library to analyse fits files
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
@@ -14,8 +13,9 @@ while True:
     print("Insert: string value - Available commands:")
     print("______")
     print("    find h   //find the points above the threshold h")
-    print("    track d  //track the points within a distance d")
-    print("    save n   //save R-phi data of the spiral arm at time n")
+    print("    spot     //isolate a spiral arm")
+    print("    track    //track the points")
+    print("    save n   //save R-phi data of the spiral arm at year n")
     print("")
     print("    plot 0   // plot the original image")
     print("    plot 1   // plot the spiral arms found")
@@ -28,17 +28,31 @@ while True:
 
     #read command
     cmd = input("string> ")
-    val = float(input("value> "))
 
     if cmd == "quit":
         exit()
 	
     elif cmd == "find":
-        peaks = spiral_finder(image, val)
+        val = float(input("threshold> "))
+        peaks = find_2d_peaks(image, val)
         rows = np.array([peak[0] for peak in peaks])
         cols = np.array([peak[1] for peak in peaks])
         spiral = np.zeros_like(image)
         spiral[rows, cols] = image[rows, cols]
+
+    elif cmd == "spot":
+        try:
+            peaks
+        except NameError:
+            print("No spiral arms found. Please run 'find h' first.")
+            continue
+
+        rm = float(input("R min> "))
+        rM = float(input("R max> "))
+        phim = float(input("phi min> "))
+        phiM = float(input("phi max> "))
+        lim = float(input("lim> "))
+        xy_neighbors = filter_peaks_by_rphi(peaks, image.shape[0], pixel_size, rm, rM, phim, phiM, lim)
 
     elif cmd == "track":
         try:
@@ -47,11 +61,11 @@ while True:
             print("No spiral arms found. Please run 'find h' first.")
             continue
         
+        val = float(input("radius> "))
         max = float(input("maximum radial distance accepted> "))
         print("Insert t to start tracking from the top, b from the bottom")
         st_point = input("start> ")
         rphi_neighbors = neig(peaks, size=image.shape[0], bound=val, max_dr=max, start=st_point)
-        
         if rphi_neighbors is not None:
             xn, yn = rphi_to_xy(rphi_neighbors, image.shape[0])
             xy_neighbors = np.column_stack((xn, yn))		
@@ -62,12 +76,13 @@ while True:
         except NameError:
             print("No spiral arms found. Please run 'track d' first.")
             continue
+        val = int(input("year> "))
         name = input("top/bot> ")
         file = outfile+str(val)+"_"+name+".txt"
-        save_rphi(rphi_neighbors, file, st_point, pixel_size)
+        save_rphi(xy_neighbors, file, phiM, pixel_size, image.shape[0])
 
     elif cmd == "plot":
-        val = int(val)
+        val = int(input("number> "))
         match val:
             case 0:
                 plot_image(image, pixel_size, label, path=outfile)
