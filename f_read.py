@@ -8,38 +8,50 @@ import numpy as np
 #############
 #===========================================================
 ############# function to read image data
-
 def read(arg):
     if len(arg)==2 and "inc" in arg[1]:
         # If the input is a FITS file, read it
-        folder = "~/thesis/Spiral_pattern/"+arg[1]
-        file="data_1300/RT.fits.gz"
-        name = folder+file
-        outfile = os.path.expanduser("~/thesis/Spiral_pattern/"+arg[1])
-
-        hdul = fits.open(name)
-        image_data = hdul[0].data
-        hdul.close()
-
-        image = image_data[0, 0, 0, :, :]  # select first frame
-        label = "Flux [W/(m⁻² pixel⁻¹)]"
-        pixel_size = 300/image.shape[0] # AU
-        #image = deproject_image(image, 0)
+        outfile, image, label, pixel_size = read_fits(arg)
 
     #for the hydrodynamical simulations give the path massratio filename
     elif len(arg)==3:
-        # If the input is a text file, read it
-        outfile = os.path.expanduser("~/thesis/Spiral_pattern/"+arg[1]+"/sim_ana/")
-        path = os.path.expanduser("~/thesis/Spiral_pattern/"+arg[1]+"/"+arg[2])
-        image = np.loadtxt(path, dtype=float)
-        label = "log column density [g/Cm⁻²]"
-        pixel_size = 320/image.shape[0]  # AU
+        outfile, image, label, pixel_size = read_pix(arg)
 
     else:
         print("Invalid input. Please provide a valid FITS file or simulation data file.")
         sys.exit(1)
 
     return  outfile, image, label, pixel_size
+
+#############
+#===========================================================
+############# function to read FITS or pix
+def read_fits(arg):
+    folder = "~/thesis/Spiral_pattern/"+arg[1]
+    file="data_1300/RT.fits.gz"
+    name = folder+file
+    outfile = os.path.expanduser("~/thesis/Spiral_pattern/"+arg[1])
+
+    hdul = fits.open(name)
+    image_data = hdul[0].data
+    hdul.close()
+
+    image = image_data[0, 0, 0, :, :]  # select first frame
+    label = "Flux [W/(m⁻² pixel⁻¹)]"
+    pixel_size = 300/image.shape[0] # AU
+    #image = deproject_image(image, 0)
+
+    return  outfile, image, label, pixel_size
+
+
+def read_pix(arg):
+    outfile = os.path.expanduser("~/thesis/Spiral_pattern/"+arg[1]+"/sim_ana/")
+    path = os.path.expanduser("~/thesis/Spiral_pattern/"+arg[1]+"/"+arg[2])
+    image = np.loadtxt(path, dtype=float)
+    label = "log column density [g/Cm⁻²]"
+    pixel_size = 320/image.shape[0]  # AU
+
+    return  outfile, image, label, pixel_size 
 
 
 #############
@@ -76,6 +88,22 @@ def read_mult(dire, arm, st=1):
 
     print("len ",len(all_data))
     return all_data
+
+
+#############
+#===========================================================
+############# function to read files formatted in col
+def read_R_data_file(filename):
+    """
+    Reads a file with columns [x, y1, y2, ...].
+    Returns:
+        x : 1D numpy array
+        ys : list of 1D numpy arrays, one for each y column
+    """
+    data = np.loadtxt(filename)
+    x = data[:, 0]
+    ys = [data[:, i] for i in range(1, data.shape[1])]
+    return x, ys
 
 
 #############

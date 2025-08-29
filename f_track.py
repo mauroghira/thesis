@@ -69,15 +69,18 @@ def modify_r_by_phi_extremes(xy_coords, image_size, phi_min_deg, phi_max_deg, mo
     rows, cols = xy_coords[:, 0], xy_coords[:, 1]
     r, phi = xy_to_rphi(rows, cols, image_size)
 
+    # Define angular extremes in radians
+    phi_min = np.deg2rad(phi_min_deg)
+    phi_max = np.deg2rad(phi_max_deg)
+    if phi_max > np.pi:
+        phi = (phi + 2*np.pi) % (2*np.pi)
+
     # Sort by phi
     sort_idx = np.argsort(phi)
     r_sorted = r[sort_idx]
     phi_sorted = phi[sort_idx]
     coords_sorted = np.column_stack((r_sorted, phi_sorted))
 
-    # Define angular extremes in radians
-    phi_min = np.deg2rad(phi_min_deg)
-    phi_max = np.deg2rad(phi_max_deg)
     subset_mask = (phi_sorted >= phi_min) & (phi_sorted <= phi_max)
 
     # Modify r in the subset
@@ -128,13 +131,9 @@ def modify_r_by_phi_extremes(xy_coords, image_size, phi_min_deg, phi_max_deg, mo
     x,y = rphi_to_xy(r_sorted, phi_sorted, image_size)
     return np.column_stack((y, x))
 
-
 #############
 #===========================================================
 ############# function for local fit of the spiral
-def spiral(phi, a, b):
-    return a * np.exp(b * phi)
-
 def fit(r, phi):
     try:
         popt, _ = curve_fit(spiral, phi, r, maxfev=10000)
@@ -143,143 +142,3 @@ def fit(r, phi):
         # Fallback to linear interpolation if fitting fails
         interp_r = np.linspace(r[0], r[-1], len(r))
     return interp_r
-
-#############
-#===========================================================
-############# function to interpolate the whole dataset in phi
-def int_all(all_data, n, i=0):
-    i = i%2
-    min, max = select_extremes(all_data, i)
-    int_dt=[]
-    for data in all_data:
-        int_dt.append(interp(data, min, max, n, i))
-
-    return int_dt
-
-#############
-#===========================================================
-############# function to interpolate the single dataset in phi
-def interp(data, min, max, n, i=0):
-    R = data[:,0]
-    phi = data[:,1]
-    # Create a more continuous R array for interpolation
-    continuous = np.linspace(min+1, max, n)
-
-    # Interpolate using linear method within the range of R
-    if i == 0:
-        f_interp = interp1d(R, phi, kind='linear', bounds_error=False, fill_value="extrapolate")
-        phi_continuous = f_interp(continuous)
-        return np.column_stack((continuous, phi_continuous))
-
-    else:
-        f_interp = interp1d(phi, R, kind='linear', bounds_error=False, fill_value="extrapolate")
-        R_continuous = f_interp(continuous)
-        return np.column_stack((R_continuous, continuous))
-
-
-#############
-#===========================================================
-############# function to smooth the data 
-def smooth(int_dt, i=1, window_size=15):
-    i = i%2
-    #i=0 to sm R, 1 for phi
-    smoothed = []
-    for data in int_dt:
-        # uniform_filter1d applies a moving average with reflection at edges
-        smooth = uniform_filter1d(data[:,i], size=window_size, mode='nearest')
-
-        if i == 0:
-            smoothed.append(np.column_stack((smooth, data[:,1])))
-        else:
-            smoothed.append(np.column_stack((data[:,0], smooth)))
-
-    return smoothed
-
-
-
-#############
-#===========================================================
-############# function to sort and smooth the distances
-def filter_bads(data, m, mm):
-    filtered_indices = np.ones(len(data), dtype=bool)
-    phi = data[:,1]
-    R = data[:,0]
-    # Define angle window in radians 
-    angle_min = np.deg2rad(m)
-    angle_max = np.deg2rad(mm)
-
-    # Iteratively apply the filter in 5 degree windows within [angle_min, angle_max]
-    window_deg = 5
-    for start_deg in range(int(np.rad2deg(angle_min)), int(np.rad2deg(angle_max)), window_deg):
-        win_min = np.deg2rad(start_deg)
-        win_max = np.deg2rad(start_deg + window_deg)
-        angle_mask = (phi >= win_min) & (phi < win_max)
-        subset_R = R[angle_mask]
-        mean_val = np.mean(subset_R) if subset_R.size > 0 else 0
-
-        # Keep only radii over the average in this angle window
-        if subset_R.size > 0:
-            filtered_indices[angle_mask] = subset_R > mean_val
-
-    return data[filtered_indices]
-    
-
-#############
-#===========================================================
-############# function to fill gaps
-def fill_phi_gaps(data, max_gap_deg=5):
-    # Sort data by phi
-    data_sorted = data[np.argsort(data[:, 1])]
-    R = data_sorted[:, 0]
-    phi = data_sorted[:, 1]
-    filled_R = []
-    filled_phi = []
-
-    for i in range(len(phi) - 1):
-        filled_R.append(R[i])
-        filled_phi.append(phi[i])
-        gap = np.rad2deg(phi[i+1] - phi[i])
-        if gap > max_gap_deg:
-            # Number of points to fill (1 per deg, excluding endpoints)
-            n_fill = int(gap) - 1
-            if n_fill > 0:
-                phi_fill = np.linspace(phi[i] + np.deg2rad(1), phi[i+1] - np.deg2rad(1), n_fill)
-                R_fill = np.linspace(R[i], R[i+1], n_fill + 2)[1:-1]  # exclude endpoints
-                filled_R.extend(R_fill)
-                filled_phi.extend(phi_fill)
-
-    # Add last point
-    filled_R.append(R[-1])
-    filled_phi.append(phi[-1])
-    return np.column_stack((filled_R, filled_phi))
-
-
-#############
-#===========================================================
-############# function to extrapolate
-def extrapolate_phi_in(points, r_in, r_out, in_lim = 20, out_lim=100):
-    points = points.copy()
-    r = points[:, 0]
-    phi = points[:, 1]
-
-    # Fit linear model phi(r) only for r <= r_cut
-    mask = (r <= r_in) | (r >= r_out)
-    if in_lim <= r_in:
-        mask &= r >= in_lim
-    elif out_lim >= r_out:
-        mask &= r <= out_lim
-
-    if np.sum(mask) < 2:
-        raise ValueError("Need at least 2 points below r_cut for linear extrapolation")
-
-    #"""
-    coeffs = np.polyfit(r[mask], phi[mask], 1)  # slope, intercept
-    slope, intercept = coeffs
-
-    # Replace phi for r > r_cut
-    mask_out = (r > r_in) & (r < r_out)
-    phi[mask_out] = slope * r[mask_out] + intercept
-    #"""
-
-    points[:, 1] = phi
-    return points

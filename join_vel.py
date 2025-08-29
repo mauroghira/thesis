@@ -7,7 +7,7 @@ from f_gen import *
 from f_read import *
 from f_plots import *
 from f_save import *
-from f_track_smooot import *
+from f_post_processing import *
 
 if len(sys.argv) != 3:
     print("Usage: python join_vel.py directory arm")
@@ -30,10 +30,10 @@ for i in range(0, 11, dt):
 
     all.append(data)
 
-#all[1] = extrapolate_phi_in(all[1], 50, 75, 30,75)
+all[1] = extrapolate_phi_in(all[1], 30, 48,30,53)
 #all[2] = extrapolate_phi_in(all[2], 50, 75, 50)
 
-#plot_all_phi_r(all, "data", dt)
+plot_all_phi_r(all, "data", dt)
 
 """
 for i, data in enumerate(all):
@@ -59,11 +59,11 @@ for i, data in enumerate(all):
     all[i] = data
 #"""
 
-interp_data = int_all(all, n=100, i=0)
-#plot_all_phi_r(interp_data, "data", dt)
+interp_data = int_all(all, n=270, i=0)
+plot_all_phi_r(interp_data, "data", dt)
 
 smooth_data = smooth(interp_data, 1)
-plot_all_phi_r(smooth_data, "data", dt)
+#plot_all_phi_r(smooth_data, "data", dt)
 
 vel = compute_velocity(smooth_data, dt)
 

@@ -1,12 +1,16 @@
 import numpy as np
 
+from astropy.constants import G, au, M_sun
+import astropy.units as u
+
 #############
 #===========================================================
 ############# function to convert coords
 
-def xy_to_rphi(rows, cols, size):
+def xy_to_rphi(rows, cols, size, px=1):
+    #px=0 if already centered
     # Convert pixel coordinates to R-phi coordinates
-    ny, nx = size-1, size-1
+    ny, nx = (size-1)*px, (size-1)*px
     x0, y0 = nx / 2, ny / 2
     x = cols - x0
     y = rows - y0
@@ -16,9 +20,9 @@ def xy_to_rphi(rows, cols, size):
 
     return r, phi
 
-def rphi_to_xy(r, phi, size):
-    x = r * np.cos(phi) + (size-1) / 2
-    y = r * np.sin(phi) + (size-1) / 2
+def rphi_to_xy(r, phi, size, px=1):
+    x = r * np.cos(phi) + (size-1)*px / 2
+    y = r * np.sin(phi) + (size-1)*px / 2
 
     return x, y
 
@@ -66,3 +70,33 @@ def compute_velocity(int_dt, dt=1.0):
     velocities.append(np.column_stack((R, dphi_dt)))
 
     return velocities
+
+def kepler(int_dt):
+    #convert units for consistency
+    radii = np.linspace(np.min(int_dt), np.max(int_dt), 100) * u.au
+    omegaK = np.sqrt(G*M_sun/radii**3)
+    # Convert to rad/year
+    omegaK_year = omegaK.to(1/u.yr)   # "1/u.yr" means frequency in cycles per year (rad/year)
+
+    return radii, omegaK_year
+
+
+#############
+#===========================================================
+############# function to fit the spirals
+def spiral(phi, a, b):
+    return a * np.exp(b * phi)
+
+def logspir(r, a, b):
+    return a * np.log(r) + b
+
+#ok for r(phi) and phi(r) too
+def archspir(r, a, b):
+    return a + b * r
+
+def r_squared(actual, predicted):
+    residuals = actual - predicted
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum( (actual - np.mean(actual))**2 )
+    r_squared = 1 - (ss_res / ss_tot)
+    return r_squared

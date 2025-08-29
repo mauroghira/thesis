@@ -7,7 +7,7 @@ from f_gen import *
 from f_read import *
 from f_plots import *
 from f_save import *
-from f_track_smooot import *
+from f_track import *
 
 outfile, image, label, pixel_size = read(sys.argv)
 

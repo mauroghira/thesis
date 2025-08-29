@@ -7,7 +7,7 @@ from f_gen import *
 from f_read import *
 from f_plots import *
 from f_save import *
-from f_track_smooot import *
+from f_track import *
 
 if len(sys.argv) != 2:
     print("Usage: python auto_track.py mass_ratio")
@@ -65,21 +65,22 @@ for i, image in enumerate(images):
         plot_neighbors(xy_neighbors, image, pixel_size, label)
         plt.show()
 
-        with open("operations.txt", "r") as f:
-            lines = [line.strip() for line in f if line.strip()]
-        param_iter = iter(lines)
-        while True:
-            try:
-                what = next(param_iter)
+        opera = os.path.expanduser("~/thesis/Spiral_pattern/"+ratio+"/"+str(i)+"_operations.txt")
+
+        with open(opera, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue  # skip empty lines
+                parts = line.split()
+                
+                what = parts[0]
                 if what == "stop":
                     break
-                pm = float(next(param_iter))
-                pM = float(next(param_iter))
+
+                pm = float(parts[1])
+                pM = float(parts[2])
                 xy_neighbors = modify_r_by_phi_extremes(xy_neighbors, image.shape[0], pm, pM, what)
-            
-            except StopIteration:
-                print("Reached end of input file.")
-                break
         
         plot_neighbors(xy_neighbors, image, pixel_size, label)
         plt.show()
