@@ -582,3 +582,41 @@ def extrapolate_phi_local(points, r_cut, kind='linear', dr=None):
     out[order, 0] = r
     out[order, 1] = phi
     return out
+
+
+
+def bad)track():
+    # Sort peaks by increasing phi (counterclockwise order)
+    r, phi = xy_to_rphi(partial[:, 0], partial[:, 1], image_size)
+    sort_idx = np.argsort(phi)
+    sorted_peaks = partial[sort_idx]
+
+    # Filter out points with radius too far from the average of their neighbors
+    filtered_peaks = []
+    r_sorted = r[sort_idx]
+    phi_sorted = phi[sort_idx]
+
+    angular_window = np.deg2rad(10)  # set window size to 10deg
+    for i in range(len(sorted_peaks)):
+        # Get indices of neighbors where the angle difference is within the angular window
+        indices = [
+            j for j in range(len(sorted_peaks))
+            if j != i and abs(angle_diff(phi_sorted[j], phi_sorted[i])) <= angular_window
+        ]
+        
+        if not indices:
+            continue
+
+        min_v = np.min([r_sorted[j] for j in indices])
+        max_v = np.max([r_sorted[j] for j in indices])
+        avg = (max_v+min_v)/2
+        dif = max_v - min_v
+
+        if r_sorted[i] <= avg or dif <= (lim/px_size):
+            filtered_peaks.append(sorted_peaks[i])
+        else:
+            r_sorted[i] = r_sorted[i-1]
+            x, y = rphi_to_xy(r_sorted[i-1], phi_sorted[i], image_size)
+            sorted_peaks[i] = np.array(y,x)
+    
+    return np.array(filtered_peaks)

@@ -2,8 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import os
-from scipy.signal import find_peaks 
-from fuctions import *
+
+from f_gen import *
+from f_read import *
+from f_plots import *
+from f_save import *
+from f_track_smooot import *
 
 outfile, image, label, pixel_size = read(sys.argv)
 
