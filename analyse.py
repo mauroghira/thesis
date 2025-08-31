@@ -55,8 +55,7 @@ while True:
         rM = float(input("R max> "))
         phim = float(input("phi min> "))
         phiM = float(input("phi max> "))
-        lim = float(input("lim> "))
-        xy_neighbors = filter_peaks_by_rphi(peaks, image.shape[0], pixel_size, rm, rM, phim, phiM, lim)
+        xy_neighbors = filter_peaks_by_rphi(peaks, image.shape[0], pixel_size, rm, rM, phim, phiM)
 
     elif cmd == "track":
         try:
@@ -89,6 +88,9 @@ while True:
         val = int(input("number> "))
         match val:
             case 0:
+                logg = input("log?> ")
+                if logg == "y":
+                    image = np.log10(image)
                 plot_image(image, pixel_size, label, path=outfile)
             
             case 1:
@@ -131,8 +133,9 @@ while True:
 
         save=input("save image? y or n> ")
         if save=="y":
+            out = os.path.expanduser("~/thesis/img_ts/")
             name = input("filename> ")
-            plt.savefig(outfile+name, bbox_inches="tight")
+            plt.savefig(out+name, bbox_inches="tight")
         plt.show()
 
     else:

@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from f_gen import kepler
 
 titlefontsize, labelfontsize, tickfontsize=20, 16, 14
@@ -13,13 +15,23 @@ markersize, linewidth = 6, 1
 
 def plot_image(image, pixel_size, label, path=""):
     extent = [-(image.shape[1]-1) * pixel_size/2, (image.shape[1]-1) * pixel_size/2, -(image.shape[0]-1) * pixel_size/2, (image.shape[0]-1) * pixel_size/2]
-    plt.figure(figsize=(10, 10))
-    plt.imshow(image, cmap="inferno", origin="lower", extent=extent)
-    plt.colorbar(label=label)
-    plt.title("Spiral Pattern", size=titlefontsize)
-    plt.xlabel("x (AU)", size=labelfontsize)
-    plt.ylabel("Y (AU)", size=labelfontsize)
-    plt.tick_params(labelsize=tickfontsize)
+    
+    fig, ax = plt.subplots(figsize=(10, 10))
+    im = ax.imshow(image, cmap="inferno", origin="lower", extent=extent)
+
+    # Get position of the main axis
+    pos = ax.get_position()
+    # Create new axis on top of the image, same width
+    cax = fig.add_axes([pos.x0, pos.y1 + 0.01, pos.width, 0.03])
+    cbar = plt.colorbar(im, cax=cax, orientation="horizontal")
+    cbar.set_label(label, fontsize=labelfontsize, labelpad=15)
+    cbar.ax.xaxis.set_ticks_position("top") 
+    cbar.ax.xaxis.set_label_position("top")
+
+    #ax.set_title("Spiral Pattern", size=titlefontsize)
+    ax.set_xlabel("x (AU)", size=labelfontsize)
+    ax.set_ylabel("Y (AU)", size=labelfontsize)
+    ax.tick_params(labelsize=tickfontsize)
     #plt.show()
 
 
@@ -31,17 +43,27 @@ def plot_neighbors(xy_neighbors, image, pixel_size, label, path=""):
     scaled_neighbors = (xy_neighbors-(image.shape[0]-1)/2) * pixel_size
     extent = [-(image.shape[1]-1) * pixel_size/2, (image.shape[1]-1) * pixel_size/2, -(image.shape[0]-1) * pixel_size/2, (image.shape[0]-1) * pixel_size/2]
     
-    fig = plt.figure(figsize=(10, 10))
-    plt.scatter(scaled_neighbors[:, 1], scaled_neighbors[:, 0], color="lime", s=10, edgecolor="k", label="Single spial arm")
-    #plt.plot(scaled_neighbors[:, 1], scaled_neighbors[:, 0], '-', color="lime", label="Single spial arm")
-    plt.imshow(image, cmap="inferno", origin="lower", extent=extent)
-    plt.colorbar(label=label)
-    plt.title("Spiral Pattern", size=titlefontsize)
-    plt.xlabel("x (AU)", size=labelfontsize)
-    plt.ylabel("Y (AU)", size=labelfontsize)
-    plt.tick_params(labelsize=tickfontsize)
+    fig, ax = plt.subplots(figsize=(10, 10))
+    im = ax.imshow(image, cmap="inferno", origin="lower", extent=extent)
 
-    plt.legend()
+    # Get position of the main axis
+    pos  = ax.get_position()
+    # Create new axis on top of the image, same width
+    cax = fig.add_axes([pos.x0, pos.y1 + 0.01, pos.width, 0.03])
+    cbar = plt.colorbar(im, cax=cax, orientation="horizontal")
+    cbar.set_label(label, fontsize=labelfontsize, labelpad=15)
+    cbar.ax.xaxis.set_ticks_position("top")
+    cbar.ax.xaxis.set_label_position("top")
+    cbar.ax.tick_params(labelsize=tickfontsize)
+
+    #ax.set_title("Spiral Pattern", size=titlefontsize)
+    ax.set_xlabel("x (AU)", size=labelfontsize)
+    ax.set_ylabel("Y (AU)", size=labelfontsize)
+    ax.tick_params(labelsize=tickfontsize)
+    ax.scatter(scaled_neighbors[:, 1], scaled_neighbors[:, 0], color="lime", s=10, edgecolor="k", label="Single spial arm")
+    #ax.plot(scaled_neighbors[:, 1], scaled_neighbors[:, 0], '-', color="lime", label="Single spial arm")
+
+    ax.legend()
 
     angular_grid()
 
@@ -64,7 +86,6 @@ def angular_grid():
     r_max = radii.max()
     for angle in angles:
         plt.plot([0, r_max*np.cos(angle)], [0, r_max*np.sin(angle)], color='black', linestyle='--', alpha=0.3)
-
 
     plt.gca().set_aspect('equal')
 
@@ -163,7 +184,7 @@ def plot_vel(int_dt, dt):
 #############
 #===========================================================
 ############# function to plot data read from file
-def plot_R_data_sets(x, ys, type="p", dt=5):
+def plot_R_data_sets(x, ys, type="p", dt=5, outfile=""):
     plt.figure(figsize=(9, 9))
     for i, y in enumerate(ys):
         if type == "v":
@@ -197,4 +218,35 @@ def plot_R_data_sets(x, ys, type="p", dt=5):
 
     plt.legend()
     plt.grid(True)
+    plt.savefig(outfile, bbox_inches="tight")
+    plt.show()
+
+
+#############
+#===========================================================
+############# function to plot spiral and track
+def spiral_plot(x,y, image, label, extent, outfile):
+    fig, ax = plt.subplots(figsize=(10, 10))
+    
+    im = ax.imshow(image, cmap="inferno", origin="lower", extent=extent)
+    # Get position of the main axis
+    pos  = ax.get_position()
+    # Create new axis on top of the image, same width
+    cax = fig.add_axes([pos.x0, pos.y1 + 0.01, pos.width, 0.03])
+    cbar = plt.colorbar(im, cax=cax, orientation="horizontal")
+    cbar.set_label(label, fontsize=labelfontsize, labelpad=15)
+    cbar.ax.xaxis.set_ticks_position("top")
+    cbar.ax.xaxis.set_label_position("top")
+    cbar.ax.tick_params(labelsize=tickfontsize)
+    
+    ax.plot(x, y, '-', color="lime", label="Single spial arm")
+    #ax.set_title("Spiral Pattern", size=titlefontsize)
+    ax.set_xlabel("x (AU)", size=labelfontsize)
+    ax.set_ylabel("Y (AU)", size=labelfontsize)
+    ax.tick_params(labelsize=tickfontsize)
+
+    ax.legend()
+    #angular_grid()
+    plt.savefig(outfile, bbox_inches="tight")
+
     plt.show()

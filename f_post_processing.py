@@ -8,7 +8,7 @@ from f_gen import *
 
 #############
 #===========================================================
-############# function to fot
+############# function to fit
 def fit_models(phi, r, candidates):
     for msg, model, (x, y, mode) in candidates:
         try:
@@ -23,10 +23,10 @@ def fit_models(phi, r, candidates):
     print("unable to fit")
     return None, None, None
 
+
 #############
 #===========================================================
 ############# function to interpolate in common range fitted data
-
 def resample_rphi(f_rphi, popt, r_min, r_max, phi_range, N=500):
     """
     Resample fitted r(phi) into equally spaced radii.

@@ -16,18 +16,9 @@ if len(sys.argv) != 2:
 ratio = sys.argv[1]
 
 images = []
-for i in range(20,31):
+for i in range(0,11):
 
-    input_file = os.path.expanduser("~/thesis/Spiral_pattern/"+ratio+"/m"+ratio)
-    #to be modified 
-    if ratio == "01":
-        i = i%20
-        if i == 10:
-            input_file += "beta10_000"+str(i)+"_logcolumndensitygcm2_proj.pix"
-        else:
-            input_file += "beta10_0000"+str(i)+"_logcolumndensitygcm2_proj.pix"
-    else:
-        input_file += "_000"+str(i)+"_logcolumndensitygcm2_proj.pix"
+    input_file = os.path.expanduser("~/thesis/Spiral_pattern/"+ratio+"/img_"+ratio+"_"+str(i)+".pix")
     
     if os.path.exists(input_file):
         image = np.loadtxt(input_file, dtype=float)
@@ -65,7 +56,7 @@ for i, image in enumerate(images):
         plot_neighbors(xy_neighbors, image, pixel_size, label)
         plt.show()
 
-        opera = os.path.expanduser("~/thesis/Spiral_pattern/"+ratio+"/"+str(i)+"_operations.txt")
+        opera = os.path.expanduser("~/thesis/Spiral_pattern/"+ratio+"/operations/"+str(i)+"_operations.txt")
 
         with open(opera, "r") as f:
             for line in f:

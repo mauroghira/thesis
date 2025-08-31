@@ -5,10 +5,7 @@ import csv
 #############
 #===========================================================
 ############# function to save the datas afteer smoothing
-def save_rphi_all(velocities):
-    file = input("ratio/filename to svae> ")
-    filename = "Spiral_pattern/"+file
-
+def save_rphi_all(velocities, filename):
     radii = velocities[0][:, 0]
     # Stack all velocity columns together
     vel_columns = [v[:, 1] for v in velocities]
@@ -18,10 +15,7 @@ def save_rphi_all(velocities):
     np.savetxt(filename, data_to_save, header=header, fmt="%.8f", delimiter="\t")
 
 
-def save_vel(velocities):
-    file = input("ratio/filename to svae> ")
-    filename = "Spiral_pattern/"+file
-
+def save_vel(velocities, filename):
     # Assume all velocities arrays have the same radii
     radii = velocities[0][:, 0]
     # Stack all velocity columns together

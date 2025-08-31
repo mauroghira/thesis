@@ -9,20 +9,22 @@ from f_plots import *
 from f_save import *
 from f_post_processing import *
 
-if len(sys.argv) != 3:
-    print("Usage: python fitting.py directory arm")
+if len(sys.argv) != 5:
+    print("Usage: python fitting.py ratio subdir arm dt")
     sys.exit(1)
 
-dir = sys.argv[1]
-arm = sys.argv[2]
+base = os.path.expanduser("~/thesis/Spiral_pattern/")
+ratio = sys.argv[1]
+subdir = sys.argv[2]
+arm = sys.argv[3]
+dt = int(sys.argv[4])
 
 N = 100
-dt = 5
 
 all = []
 for i in range(0, 11, dt):
-    input_1 = dir + str(i) + "_" + arm + ".txt"
-    input_2 = dir + str(i) + "_i" + arm + ".txt"
+    input_1 = base + ratio + "/" + subdir + "/" + str(i) + "_" + arm + ".txt"
+    input_2 = base + ratio + "/" + subdir + "/" + str(i) + "_i" + arm + ".txt"
     if os.path.exists(input_1):
         data = read_single(input_1)
     if os.path.exists(input_2):
@@ -64,5 +66,10 @@ vel = compute_velocity(interp_data, dt)
 
 plot_vel(vel, dt)
 
-save_rphi_all(interp_data)
-save_vel(vel)
+name = input("filename> ")
+file = base + ratio + "/results/" + name
+save_rphi_all(interp_data, file)
+
+name = input("filename> ")
+file = base + ratio + "/results/" + name
+save_vel(vel, file)

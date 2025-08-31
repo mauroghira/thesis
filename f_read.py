@@ -38,7 +38,7 @@ def read_fits(arg):
 
     image = image_data[0, 0, 0, :, :]  # select first frame
     label = "Flux [W/(m⁻² pixel⁻¹)]"
-    pixel_size = 300/image.shape[0] # AU
+    pixel_size = 320/image.shape[0] # AU
     #image = deproject_image(image, 0)
 
     return  outfile, image, label, pixel_size
