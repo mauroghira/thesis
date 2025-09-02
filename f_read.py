@@ -5,53 +5,58 @@ import sys
 import os
 import numpy as np
 
+from f_gen import *
+
 #############
 #===========================================================
 ############# function to read image data
 def read(arg):
-    if len(arg)==2 and "inc" in arg[1]:
+    if len(arg)!=3:
+        print("Invalid input. analyse.py ratio inc_X/yN or year")
+        sys.exit(1)
+    
+    if "inc" in arg[2]:
         # If the input is a FITS file, read it
-        outfile, image, label, pixel_size = read_fits(arg)
+        outfile, image, label, pixel_size, vmin = read_fits(arg)
 
     #for the hydrodynamical simulations give the path massratio filename
-    elif len(arg)==3:
-        outfile, image, label, pixel_size = read_pix(arg)
-
     else:
-        print("Invalid input. Please provide a valid FITS file or simulation data file.")
-        sys.exit(1)
+        outfile, image, label, pixel_size, vmin = read_pix(arg)
 
-    return  outfile, image, label, pixel_size
+    return  outfile, image, label, pixel_size, vmin
 
 #############
 #===========================================================
 ############# function to read FITS or pix
 def read_fits(arg):
-    folder = "~/thesis/Spiral_pattern/"+arg[1]
+    folder = "~/thesis/Spiral_pattern/"+arg[1]+"/"+arg[2]+"/"
     file="data_1300/RT.fits.gz"
     name = folder+file
-    outfile = os.path.expanduser("~/thesis/Spiral_pattern/"+arg[1])
+    outfile = os.path.expanduser("~/thesis/Spiral_pattern/"+arg[1]+"/obs_data/")
 
     hdul = fits.open(name)
     image_data = hdul[0].data
     hdul.close()
 
     image = image_data[0, 0, 0, :, :]  # select first frame
-    label = "Flux [W/(m⁻² pixel⁻¹)]"
+    label = "Flux [W m⁻² pixel⁻¹]"
     pixel_size = 320/image.shape[0] # AU
+
+    dif = mod_img(image, pixel_size)
+    rot = np.rot90(dif, k=1)
     #image = deproject_image(image, 0)
 
-    return  outfile, image, label, pixel_size
+    return  outfile, rot, label, pixel_size, -2e-21
 
 
 def read_pix(arg):
     outfile = os.path.expanduser("~/thesis/Spiral_pattern/"+arg[1]+"/sim_ana/")
-    path = os.path.expanduser("~/thesis/Spiral_pattern/"+arg[1]+"/"+arg[2])
+    path = os.path.expanduser("~/thesis/Spiral_pattern/"+arg[1]+"/img_"+arg[1]+"_"+arg[2]+".pix")
     image = np.loadtxt(path, dtype=float)
-    label = "log column density [g/Cm⁻²]"
+    label = "log column density [g Cm⁻²]"
     pixel_size = 320/image.shape[0]  # AU
 
-    return  outfile, image, label, pixel_size 
+    return  outfile, image, label, pixel_size, None
 
 
 #############
@@ -104,6 +109,48 @@ def read_R_data_file(filename):
     x = data[:, 0]
     ys = [data[:, i] for i in range(1, data.shape[1])]
     return x, ys
+
+
+#############
+#===========================================================
+############# function to filter out the constant pattern
+def mod_img(image, px):
+    #"""
+    #compute the radial profile
+    ny, nx = image.shape
+    y, x = np.indices((ny, nx))   # full 2D coordinate grids
+    r, phi = xy_to_rphi(y, x, image.shape[0])
+    
+    # Mask: keep only pixels inside the disk
+    r_max_disk = (min(nx, ny) *np.sqrt(2) // 2)  # or another definition of disk radius
+    mask = r <= r_max_disk
+
+    #"""
+    bin_centers, radial_mean = radial_average(image[mask], r[mask])
+    # Interpolate values back to all r
+    values = np.interp(r.ravel(), bin_centers, radial_mean, left=np.nan, right=np.nan)
+    radial_img = values.reshape(image.shape)
+    """
+    bin_centers, radial_mean, r_bin_index = radial_average_masked(image, r, mask=mask)
+    # Interpolate radial_mean to each valid pixel's radius (use bin centers)
+    # Use np.interp on radii for masked pixels only.
+    valid_r = r[mask]
+    # For interpolation we need to skip bins that are nan. Create arrays of valid bins:
+    valid_bins = ~np.isnan(radial_mean)
+    if valid_bins.sum() < 2:
+        raise RuntimeError("Not enough radial bins with data to interpolate.")
+    interp_centers = bin_centers[valid_bins]
+    interp_values = radial_mean[valid_bins]
+
+    interp_values_for_pixels = np.interp(valid_r, interp_centers, interp_values,
+                                         left=np.nan, right=np.nan)
+    radial_img = np.full_like(image, np.nan, dtype=float)
+    radial_img[mask] = interp_values_for_pixels
+    #"""
+
+    diff = image-radial_img
+
+    return diff
 
 
 #############

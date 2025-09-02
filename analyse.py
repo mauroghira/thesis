@@ -9,7 +9,7 @@ from f_plots import *
 from f_save import *
 from f_track import *
 
-outfile, image, label, pixel_size = read(sys.argv)
+outfile, image, label, pixel_size, vmin = read(sys.argv)
 
 #parse
 while True:
@@ -18,7 +18,7 @@ while True:
     print("______")
     print("    find h   //find the points above the threshold h")
     print("    spot     //isolate a spiral arm")
-    print("    track    //track the points")
+    print("    iter h   //iterate the finding")
     print("    save n   //save R-phi data of the spiral arm at year n")
     print("")
     print("    plot 0   // plot the original image")
@@ -38,7 +38,24 @@ while True:
 	
     elif cmd == "find":
         val = float(input("threshold> "))
-        peaks = find_2d_peaks(image, val)
+        mx = float(input("max> "))
+        peaks = find_2d_peaks(image, val, mx)
+        rows = np.array([peak[0] for peak in peaks])
+        cols = np.array([peak[1] for peak in peaks])
+        spiral = np.zeros_like(image)
+        spiral[rows, cols] = image[rows, cols]
+
+    elif cmd == "iter":
+        try:
+            spiral
+        except NameError:
+            print("No spiral arms found. Please run 'find h' first.")
+            continue
+
+        val = float(input("threshold> "))
+        mx = float(input("max> "))
+        window = int(input("window size> "))
+        peaks = find_2d_peaks(spiral, val, mx, window)
         rows = np.array([peak[0] for peak in peaks])
         cols = np.array([peak[1] for peak in peaks])
         spiral = np.zeros_like(image)
@@ -88,10 +105,7 @@ while True:
         val = int(input("number> "))
         match val:
             case 0:
-                logg = input("log?> ")
-                if logg == "y":
-                    image = np.log10(image)
-                plot_image(image, pixel_size, label, path=outfile)
+                plot_image(image, pixel_size, label, vmin)
             
             case 1:
                 try:
@@ -99,7 +113,7 @@ while True:
                 except NameError:
                     print("No spiral arms found. Please run 'find h' first.")
                     continue
-                plot_image(spiral, pixel_size, label, path=outfile)
+                plot_image(spiral, pixel_size, label, vmin)
             
             case 2:
                 try:
@@ -107,7 +121,7 @@ while True:
                 except NameError:
                     print("No spiral arms found. Please run 'track d' first.")
                     continue
-                plot_neighbors(xy_neighbors, image, pixel_size, label, path=outfile)
+                plot_neighbors(xy_neighbors, image, pixel_size, label, vmin)
             
             case 3:
                 try:

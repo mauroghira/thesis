@@ -10,7 +10,7 @@ from f_save import *
 from f_post_processing import *
 
 if len(sys.argv) != 5:
-    print("Usage: python join_vel.py ratio sbudir arm dt")
+    print("Usage: python interpoling.py ratio subdir arm dt")
     sys.exit(1)
 
 base = os.path.expanduser("~/thesis/Spiral_pattern/")
@@ -31,11 +31,35 @@ for i in range(0, 11, dt):
 
     all.append(data)
 
-all[1] = extrapolate_phi_in(all[1], 30, 48,30,53)
+#plot_all_phi_r(all, "data", dt)
+
+interp_data = int_all(all, n=270, i=0)
+#plot_all_phi_r(interp_data, "interp", dt)
+
+smooth_data = smooth(interp_data, 1)
+plot_all_phi_r(smooth_data, "smooth", dt)
+
+vel = compute_velocity(smooth_data, dt)
+
+plot_vel(vel, dt)
+
+if subdir == "sim_ana":
+    file = base + ratio + "/results/sim_" + arm + "_int_"+str(dt)+"_phi.txt"
+else:
+    file = base + ratio + "/results/mc_" + arm + "_int_"+str(dt)+"_phi.txt"
+save_rphi_all(smooth_data, file)
+
+if subdir == "sim_ana":
+    file = base + ratio + "/results/sim_" + arm + "_int_"+str(dt)+"_vel.txt"
+else:
+    file = base + ratio + "/results/mc_" + arm + "_int_"+str(dt)+"_vel.txt"
+save_vel(vel, file)
+
+
+
+
+#all[1] = extrapolate_phi_in(all[1], 30, 48,30,53)
 #all[2] = extrapolate_phi_in(all[2], 50, 75, 50)
-
-plot_all_phi_r(all, "data", dt)
-
 """
 for i, data in enumerate(all):
     #data = data[data[:, 0] >= 40]
@@ -59,21 +83,3 @@ for i, data in enumerate(all):
 
     all[i] = data
 #"""
-
-interp_data = int_all(all, n=270, i=0)
-plot_all_phi_r(interp_data, "data", dt)
-
-smooth_data = smooth(interp_data, 1)
-#plot_all_phi_r(smooth_data, "data", dt)
-
-vel = compute_velocity(smooth_data, dt)
-
-plot_vel(vel, dt)
-
-name = input("filename> ")
-file = base + ratio + "/results/" + name
-save_rphi_all(smooth_data, file)
-
-name = input("filename> ")
-file = base + ratio + "/results/" + name
-save_vel(vel, file)

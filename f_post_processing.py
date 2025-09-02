@@ -215,3 +215,16 @@ def extrapolate_phi_in(points, r_in, r_out, in_lim = 20, out_lim=100, type="log"
 
     points[:, 1] = phi
     return points
+
+
+#############
+#===========================================================
+############# function to compare fits
+def fit_vel(r, omega):
+    A, dev = curve_fit(vkep, r, omega, maxfev=10000)
+    B, dev2 = curve_fit(vcost, r, omega, maxfev=10000)
+
+    rsq1 = r_squared(omega, vkep(r, A))
+    rsq2 = r_squared(omega, vcost(r, B))
+    
+    print(rsq1, rsq2)

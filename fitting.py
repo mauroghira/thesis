@@ -30,7 +30,7 @@ for i in range(0, 11, dt):
     if os.path.exists(input_2):
         data2 = read_single(input_2)
         data = np.vstack((data2, data))
-
+    
     all.append(data)
 
 pm, PM = select_extremes(all, 1)
@@ -66,10 +66,14 @@ vel = compute_velocity(interp_data, dt)
 
 plot_vel(vel, dt)
 
-name = input("filename> ")
-file = base + ratio + "/results/" + name
+if subdir == "sim_ana":
+    file = base + ratio + "/results/sim_" + arm + "_fit_"+str(dt)+"_phi.txt"
+else:
+    file = base + ratio + "/results/mc_" + arm + "_fit_"+str(dt)+"_phi.txt"
 save_rphi_all(interp_data, file)
 
-name = input("filename> ")
-file = base + ratio + "/results/" + name
+if subdir == "sim_ana":
+    file = base + ratio + "/results/sim_" + arm + "_fit_"+str(dt)+"_vel.txt"
+else:
+    file = base + ratio + "/results/mc_" + arm + "_fit_"+str(dt)+"_vel.txt"
 save_vel(vel, file)

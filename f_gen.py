@@ -100,3 +100,41 @@ def r_squared(actual, predicted):
     ss_tot = np.sum( (actual - np.mean(actual))**2 )
     r_squared = 1 - (ss_res / ss_tot)
     return r_squared
+
+#############
+#===========================================================
+############# function to fit the speed profile
+def vkep(r, A):
+    return A*r**(-3/2)
+
+def vcost(r, A):
+    return A * np.ones_like(r)
+
+
+#############
+#===========================================================
+############# function to compute the radial profile in the mcfost image
+def radial_average(image, r):
+    # Define radius bins
+    r_max = r.max()
+    nbins = int(r_max)
+    bins = np.linspace(0, r_max, nbins+1)
+    bin_centers = 0.5 * (bins[1:] + bins[:-1])
+
+    # Flatten arrays
+    r_flat = r.ravel()
+    img_flat = image.ravel()
+
+    # Digitize radii into bins
+    inds = np.digitize(r_flat, bins) - 1
+
+    # Compute mean per bin
+    radial_mean = np.zeros(nbins)
+    for i in range(nbins):
+        mask = inds == i
+        if np.any(mask):
+            radial_mean[i] = img_flat[mask].mean()
+        else:
+            radial_mean[i] = np.nan
+
+    return bin_centers, radial_mean

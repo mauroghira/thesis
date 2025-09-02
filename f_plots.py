@@ -13,11 +13,14 @@ markersize, linewidth = 6, 1
 #===========================================================
 ############# function to plot the original image or the peaks
 
-def plot_image(image, pixel_size, label, path=""):
+def plot_image(image, pixel_size, label, vmin=None):
     extent = [-(image.shape[1]-1) * pixel_size/2, (image.shape[1]-1) * pixel_size/2, -(image.shape[0]-1) * pixel_size/2, (image.shape[0]-1) * pixel_size/2]
     
     fig, ax = plt.subplots(figsize=(10, 10))
-    im = ax.imshow(image, cmap="inferno", origin="lower", extent=extent)
+    if vmin is None:
+        im = ax.imshow(image, cmap="inferno", origin="lower", extent=extent)
+    else:
+        im = ax.imshow(image, cmap="inferno", vmin=vmin, origin="lower", extent=extent)
 
     # Get position of the main axis
     pos = ax.get_position()
@@ -32,6 +35,8 @@ def plot_image(image, pixel_size, label, path=""):
     ax.set_xlabel("x (AU)", size=labelfontsize)
     ax.set_ylabel("Y (AU)", size=labelfontsize)
     ax.tick_params(labelsize=tickfontsize)
+
+    #angular_grid(ax)
     #plt.show()
 
 
@@ -39,12 +44,15 @@ def plot_image(image, pixel_size, label, path=""):
 #===========================================================
 ############# function to plot the spiral arm neighbors
 
-def plot_neighbors(xy_neighbors, image, pixel_size, label, path=""):
+def plot_neighbors(xy_neighbors, image, pixel_size, label, vmin=None):
     scaled_neighbors = (xy_neighbors-(image.shape[0]-1)/2) * pixel_size
     extent = [-(image.shape[1]-1) * pixel_size/2, (image.shape[1]-1) * pixel_size/2, -(image.shape[0]-1) * pixel_size/2, (image.shape[0]-1) * pixel_size/2]
     
     fig, ax = plt.subplots(figsize=(10, 10))
-    im = ax.imshow(image, cmap="inferno", origin="lower", extent=extent)
+    if vmin is None:
+        im = ax.imshow(image, cmap="inferno", origin="lower", extent=extent)
+    else:
+        im = ax.imshow(image, cmap="inferno", vmin=vmin, origin="lower", extent=extent)
 
     # Get position of the main axis
     pos  = ax.get_position()
@@ -63,16 +71,16 @@ def plot_neighbors(xy_neighbors, image, pixel_size, label, path=""):
     ax.scatter(scaled_neighbors[:, 1], scaled_neighbors[:, 0], color="lime", s=10, edgecolor="k", label="Single spial arm")
     #ax.plot(scaled_neighbors[:, 1], scaled_neighbors[:, 0], '-', color="lime", label="Single spial arm")
 
+    angular_grid(ax)
+    
     ax.legend()
-
-    angular_grid()
 
     #plt.show()
 
 #############
 #===========================================================
 ############# function to plot angular grid to easy trackk
-def angular_grid():
+def angular_grid(ax):
     # Angular grid (spokes)
     angles = np.deg2rad(np.arange(0, 360, 20))  # every 30 degrees
 
@@ -80,12 +88,12 @@ def angular_grid():
     radii = np.linspace(20, 100, 5)
     circle = np.linspace(0, 2*np.pi, 300)
     for r in radii:
-        plt.plot(r*np.cos(circle), r*np.sin(circle), color='black', linestyle='--', alpha=0.3)
+        ax.plot(r*np.cos(circle), r*np.sin(circle), color='lime', linestyle='--', alpha=0.5)
 
     # Radii (spokes at given angles)
     r_max = radii.max()
     for angle in angles:
-        plt.plot([0, r_max*np.cos(angle)], [0, r_max*np.sin(angle)], color='black', linestyle='--', alpha=0.3)
+        ax.plot([0, r_max*np.cos(angle)], [0, r_max*np.sin(angle)], color='lime', linestyle='--', alpha=0.5)
 
     plt.gca().set_aspect('equal')
 
@@ -225,10 +233,13 @@ def plot_R_data_sets(x, ys, type="p", dt=5, outfile=""):
 #############
 #===========================================================
 ############# function to plot spiral and track
-def spiral_plot(x,y, image, label, extent, outfile):
+def spiral_plot(x,y, image, label, extent, outfile, vmin):
     fig, ax = plt.subplots(figsize=(10, 10))
     
-    im = ax.imshow(image, cmap="inferno", origin="lower", extent=extent)
+    if vmin is None:
+        im = ax.imshow(image, cmap="inferno", origin="lower", extent=extent)
+    else:
+        im = ax.imshow(image, cmap="inferno", vmin=vmin, origin="lower", extent=extent)
     # Get position of the main axis
     pos  = ax.get_position()
     # Create new axis on top of the image, same width

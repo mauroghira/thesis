@@ -10,11 +10,11 @@ from f_gen import *
 #############
 #===========================================================
 ############# function to find the spiral arms in the image
-def find_2d_peaks(image, threshold=0):
+def find_2d_peaks(image, threshold=0, max=5, window=3):
     # Apply a maximum filter to find local maxima
-    neighborhood = np.ones((3, 3))
+    neighborhood = np.ones((window, window))
     local_max = (image == maximum_filter(image, footprint=neighborhood))
-    detected_peaks = np.argwhere(local_max & (image > threshold))
+    detected_peaks = np.argwhere(local_max & (image > threshold) & (image < max))
     return detected_peaks
 
 
@@ -59,12 +59,6 @@ def filter_peaks_by_rphi(peaks, image_size, px_size, r_min=0, r_max=100, phi_min
 #===========================================================
 ############# function to process data before selecting
 def modify_r_by_phi_extremes(xy_coords, image_size, phi_min_deg, phi_max_deg, mode='out'):
-    """
-    Given an array of xy coordinates, convert to polar (r, phi), sort by phi,
-    and modify r in the subset defined by angular extremes.
-    mode: 'higher', 'lower', or 'avg' to keep only higher/lower than avg or set to avg.
-    Returns: array of (r, phi) sorted by phi, with r modified in the subset.
-    """
     # Convert xy to polar coordinates
     rows, cols = xy_coords[:, 0], xy_coords[:, 1]
     r, phi = xy_to_rphi(rows, cols, image_size)
@@ -104,7 +98,7 @@ def modify_r_by_phi_extremes(xy_coords, image_size, phi_min_deg, phi_max_deg, mo
             r_sorted = r_sorted[~remove_mask]
             phi_sorted = phi_sorted[~remove_mask]
 
-        elif mode == 'avg':
+        elif mode == 'fit':
             # Interpolate r using a logarithmic spiral formula: r = a * exp(b * phi)
             # Fit spiral parameters to the subset
             if subset_r.size < 5:
@@ -127,6 +121,10 @@ def modify_r_by_phi_extremes(xy_coords, image_size, phi_min_deg, phi_max_deg, mo
             # Remove points in the angular window
             r_sorted = r_sorted[~subset_mask]
             phi_sorted = phi_sorted[~subset_mask]
+        
+        elif mode == 'avg':
+            # Replace all r in the angular range with their average
+            r_sorted[subset_mask] = avg_r
 
     x,y = rphi_to_xy(r_sorted, phi_sorted, image_size)
     return np.column_stack((y, x))
