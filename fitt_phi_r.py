@@ -7,7 +7,7 @@ from f_gen import *
 from f_read import *
 from f_plots import *
 from f_save import *
-from f_post_processing import *
+from f_fits import *
 
 if len(sys.argv) != 5:
     print("Usage: python fitting.py ratio subdir arm dt")
@@ -24,13 +24,14 @@ N = 100
 all = []
 for i in range(0, 11, dt):
     input_1 = base + ratio + "/" + subdir + "/" + str(i) + "_" + arm + ".txt"
-    input_2 = base + ratio + "/" + subdir + "/" + str(i) + "_i" + arm + ".txt"
+    #input_2 = base + ratio + "/" + subdir + "/" + str(i) + "_i" + arm + ".txt"
     if os.path.exists(input_1):
         data = read_single(input_1)
+    """
     if os.path.exists(input_2):
         data2 = read_single(input_2)
         data = np.vstack((data2, data))
-    
+    """
     all.append(data)
 
 pm, PM = select_extremes(all, 1)
@@ -63,8 +64,8 @@ for data in all:
 plot_all_phi_r(interp_data, "data", dt)
 
 vel = compute_velocity(interp_data, dt)
-
 plot_vel(vel, dt)
+
 
 if subdir == "sim_ana":
     file = base + ratio + "/results/sim_" + arm + "_fit_"+str(dt)+"_phi.txt"

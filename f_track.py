@@ -123,8 +123,19 @@ def modify_r_by_phi_extremes(xy_coords, image_size, phi_min_deg, phi_max_deg, mo
             phi_sorted = phi_sorted[~subset_mask]
         
         elif mode == 'avg':
-            # Replace all r in the angular range with their average
-            r_sorted[subset_mask] = avg_r
+            # Local averaging within ±5 degrees
+            window = np.deg2rad(5)
+            new_r = np.copy(r_sorted)
+
+            for i, (phi_val, r_val) in enumerate(zip(phi_sorted, r_sorted)):
+                if subset_mask[i]:
+                    # Find neighbors within ±5° of current phi
+                    neighbor_mask = (phi_sorted >= phi_val - window) & (phi_sorted <= phi_val + window)
+                    neighbor_r = r_sorted[neighbor_mask]
+                    if neighbor_r.size > 0:
+                        new_r[i] = np.mean(neighbor_r)
+
+            r_sorted = new_r
 
     x,y = rphi_to_xy(r_sorted, phi_sorted, image_size)
     return np.column_stack((y, x))

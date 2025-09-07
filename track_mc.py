@@ -35,7 +35,7 @@ for i in range(0,11):
         image = image_data[0, 0, 0, :, :]  # select first frame
         pixel_size = 320/512  # AU
         rot = np.rot90(image, k=1)
-        diff = mod_img(rot, pixel_size)
+        diff = mod_img(rot)
         images.append(diff)
 
     else:
@@ -45,6 +45,7 @@ outfile = os.path.expanduser("~/thesis/Spiral_pattern/"+ratio+"/obs_data/")
 label = "log flux [W/(m² px)]"
 pixel_size = 320/512  # AU
 
+vmin = -1e-21
 ex = 1e-20
 
 for i, image in enumerate(images):
@@ -62,7 +63,7 @@ for i, image in enumerate(images):
     rep = "y"
     while rep== "y":
         xy_neighbors = filter_peaks_by_rphi(peaks, image.shape[0], pixel_size, rm, rM, phim, phiM)
-        plot_neighbors(xy_neighbors, images[i], pixel_size, label, -1e-21)
+        plot_neighbors(xy_neighbors, images[i], pixel_size, label, vmin)
         plt.show()
 
         opera = os.path.expanduser("~/thesis/Spiral_pattern/"+ratio+"/operations/"+str(int(i*10/(len(images)-1)))+"_mc_"+name+".txt")
@@ -82,7 +83,7 @@ for i, image in enumerate(images):
                 pM = float(parts[2])
                 xy_neighbors = modify_r_by_phi_extremes(xy_neighbors, image.shape[0], pm, pM, what)
         
-        plot_neighbors(xy_neighbors, images[i], pixel_size, label, -1e-21)
+        plot_neighbors(xy_neighbors, images[i], pixel_size, label, vmin)
         plt.show()
             
         while True:
@@ -94,7 +95,7 @@ for i, image in enumerate(images):
             pM = float(input("phi max> "))
             xy_neighbors = modify_r_by_phi_extremes(xy_neighbors, image.shape[0], pm, pM, what)
 
-            plot_neighbors(xy_neighbors, images[i], pixel_size, label, -1e-21)
+            plot_neighbors(xy_neighbors, images[i], pixel_size, label, vmin)
             plt.show()
 
         rep = input("try again?> ")

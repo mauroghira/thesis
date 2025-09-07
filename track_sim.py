@@ -49,10 +49,15 @@ for i, image in enumerate(images):
     spiral = np.zeros_like(image)
     spiral[rows, cols] = image[rows, cols]
 
+    if ratio=="01":
+        vmin = 2
+    else:
+        vmin = None
+
     rep = "y"
     while rep== "y":
         xy_neighbors = filter_peaks_by_rphi(peaks, image.shape[0], pixel_size, rm, rM, phim, phiM)
-        plot_neighbors(xy_neighbors, image, pixel_size, label)
+        plot_neighbors(xy_neighbors, image, pixel_size, label, vmin)
         plt.show()
 
         opera = os.path.expanduser("~/thesis/Spiral_pattern/"+ratio+"/operations/"+str(i)+"_sim_"+name+".txt")
@@ -72,7 +77,7 @@ for i, image in enumerate(images):
                 pM = float(parts[2])
                 xy_neighbors = modify_r_by_phi_extremes(xy_neighbors, image.shape[0], pm, pM, what)
         
-        plot_neighbors(xy_neighbors, image, pixel_size, label)
+        plot_neighbors(xy_neighbors, image, pixel_size, label, vmin)
         plt.show()
             
         while True:
@@ -84,7 +89,7 @@ for i, image in enumerate(images):
             pM = float(input("phi max> "))
             xy_neighbors = modify_r_by_phi_extremes(xy_neighbors, image.shape[0], pm, pM, what)
 
-            plot_neighbors(xy_neighbors, image, pixel_size, label)
+            plot_neighbors(xy_neighbors, image, pixel_size, label, vmin)
             plt.show()
 
         rep = input("try again?> ")

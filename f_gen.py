@@ -2,11 +2,11 @@ import numpy as np
 
 from astropy.constants import G, au, M_sun
 import astropy.units as u
+from scipy.stats import chi2
 
 #############
 #===========================================================
 ############# function to convert coords
-
 def xy_to_rphi(rows, cols, size, px=1):
     #px=0 if already centered
     # Convert pixel coordinates to R-phi coordinates
@@ -30,7 +30,6 @@ def rphi_to_xy(r, phi, size, px=1):
 #############
 #===========================================================
 ############# function to measure angular difference
-
 def angle_diff(phi_new, phi_old):
     """Return signed CCW difference in range (-π, π]."""
     dphi = phi_new - phi_old
@@ -65,9 +64,10 @@ def compute_velocity(int_dt, dt=1.0):
         velocities.append(np.column_stack((R, dphi_dt)))
     
     #add velocity 0-10
-    phi_prev = int_dt[0][:, 1]
-    dphi_dt = (phi_curr - phi_prev) / (dt*(len(int_dt)-1))
-    velocities.append(np.column_stack((R, dphi_dt)))
+    if dt != 10:
+        phi_prev = int_dt[0][:, 1]
+        dphi_dt = (phi_curr - phi_prev) / (dt*(len(int_dt)-1))
+        velocities.append(np.column_stack((R, dphi_dt)))
 
     return velocities
 
@@ -100,6 +100,16 @@ def r_squared(actual, predicted):
     ss_tot = np.sum( (actual - np.mean(actual))**2 )
     r_squared = 1 - (ss_res / ss_tot)
     return r_squared
+
+def chi_sq(x, y, model, popt, sigma):
+    # chi quadro
+    res = y - model(x, *popt)
+    chi2_val = np.sum((res / sigma)**2)
+    dof = len(x) - len(popt)
+    chi2_red = chi2_val / dof
+    p_value = chi2.sf(chi2_val, dof)
+
+    return chi2_val, chi2_red, p_value
 
 #############
 #===========================================================

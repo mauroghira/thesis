@@ -68,7 +68,7 @@ def plot_neighbors(xy_neighbors, image, pixel_size, label, vmin=None):
     ax.set_xlabel("x (AU)", size=labelfontsize)
     ax.set_ylabel("Y (AU)", size=labelfontsize)
     ax.tick_params(labelsize=tickfontsize)
-    ax.scatter(scaled_neighbors[:, 1], scaled_neighbors[:, 0], color="lime", s=10, edgecolor="k", label="Single spial arm")
+    ax.scatter(scaled_neighbors[:, 1], scaled_neighbors[:, 0], color="lime", s=1, label="Single spial arm")
     #ax.plot(scaled_neighbors[:, 1], scaled_neighbors[:, 0], '-', color="lime", label="Single spial arm")
 
     angular_grid(ax)
@@ -226,8 +226,8 @@ def plot_R_data_sets(x, ys, type="p", dt=5, outfile=""):
 
     plt.legend()
     plt.grid(True)
-    plt.savefig(outfile, bbox_inches="tight")
-    plt.show()
+    #plt.savefig(outfile, bbox_inches="tight")
+    #plt.show()
 
 
 #############
@@ -258,6 +258,6 @@ def spiral_plot(x,y, image, label, extent, outfile, vmin):
 
     ax.legend()
     #angular_grid()
-    plt.savefig(outfile, bbox_inches="tight")
+    #plt.savefig(outfile, bbox_inches="tight")
 
     plt.show()

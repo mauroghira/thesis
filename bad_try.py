@@ -620,3 +620,187 @@ def bad)track():
             sorted_peaks[i] = np.array(y,x)
     
     return np.array(filtered_peaks)
+
+
+
+
+
+#############
+#===========================================================
+############# function to sort and smooth the distances
+def filter_bads(data, m, mm):
+    filtered_indices = np.ones(len(data), dtype=bool)
+    phi = data[:,1]
+    R = data[:,0]
+    # Define angle window in radians 
+    angle_min = np.deg2rad(m)
+    angle_max = np.deg2rad(mm)
+
+    # Iteratively apply the filter in 5 degree windows within [angle_min, angle_max]
+    window_deg = 5
+    for start_deg in range(int(np.rad2deg(angle_min)), int(np.rad2deg(angle_max)), window_deg):
+        win_min = np.deg2rad(start_deg)
+        win_max = np.deg2rad(start_deg + window_deg)
+        angle_mask = (phi >= win_min) & (phi < win_max)
+        subset_R = R[angle_mask]
+        mean_val = np.mean(subset_R) if subset_R.size > 0 else 0
+
+        # Keep only radii over the average in this angle window
+        if subset_R.size > 0:
+            filtered_indices[angle_mask] = subset_R > mean_val
+
+    return data[filtered_indices]
+    
+
+#############
+#===========================================================
+############# function to fill gaps
+def fill_phi_gaps(data, max_gap_deg=5):
+    # Sort data by phi
+    data_sorted = data[np.argsort(data[:, 1])]
+    R = data_sorted[:, 0]
+    phi = data_sorted[:, 1]
+    filled_R = []
+    filled_phi = []
+
+    for i in range(len(phi) - 1):
+        filled_R.append(R[i])
+        filled_phi.append(phi[i])
+        gap = np.rad2deg(phi[i+1] - phi[i])
+        if gap > max_gap_deg:
+            # Number of points to fill (1 per deg, excluding endpoints)
+            n_fill = int(gap) - 1
+            if n_fill > 0:
+                phi_fill = np.linspace(phi[i] + np.deg2rad(1), phi[i+1] - np.deg2rad(1), n_fill)
+                R_fill = np.linspace(R[i], R[i+1], n_fill + 2)[1:-1]  # exclude endpoints
+                filled_R.extend(R_fill)
+                filled_phi.extend(phi_fill)
+
+    # Add last point
+    filled_R.append(R[-1])
+    filled_phi.append(phi[-1])
+    return np.column_stack((filled_R, filled_phi))
+
+
+#############
+#===========================================================
+############# function to extrapolate
+def extrapolate_phi_in(points, r_in, r_out, in_lim = 20, out_lim=100, type="log"):
+    points = points.copy()
+    r = points[:, 0]
+    phi = points[:, 1]
+
+    # Fit linear model phi(r) only for r <= r_cut
+    mask = (r <= r_in) | (r >= r_out)
+    if in_lim <= r_in:
+        mask &= r >= in_lim
+    elif out_lim >= r_out:
+        mask &= r <= out_lim
+
+    if np.sum(mask) < 2:
+        raise ValueError("Need at least 2 points below r_cut for linear extrapolation")
+
+        # Fit chosen spiral model
+    if type == "log":
+        X = np.log(r[mask])
+    elif type == "arch":
+        X = r[mask]
+    else:
+        raise ValueError("type must be 'log' or 'arch'")
+
+    coeffs = np.polyfit(X, phi[mask], 1)
+    a, b = coeffs
+
+    # Extrapolate inside (r_in, r_out)
+    mask_out = (r > r_in) & (r < r_out)
+    if type == "log":
+        phi[mask_out] = a * np.log(r[mask_out]) + b
+    else:  # "arch"
+        phi[mask_out] = a * r[mask_out] + b
+
+    points[:, 1] = phi
+    return points
+
+#############
+#===========================================================
+############# function for bad practice
+def fix_phi_monotonic(datasets, max_iter=1000):
+    datasets = [ds.copy() for ds in datasets]  # work on copies
+
+    changed = True
+    iterations = 0
+
+    while changed and iterations < max_iter:
+        changed = False
+        iterations += 1
+
+        for i in range(1, len(datasets)):
+            prev = datasets[i - 1]
+            curr = datasets[i]
+
+            for j in range(len(curr)):
+                if curr[j, 1] < prev[j, 1]:  # check phi
+                    # swap phi values
+                    prev[j, 1], curr[j, 1] = curr[j, 1], prev[j, 1]
+                    changed = True
+
+    return datasets
+
+
+#######from interpoling.py
+    """
+    input_2 = base + ratio + "/" + subdir + "/" + str(i) + "_i" + arm + ".txt"
+    if os.path.exists(input_2):
+        data2 = read_single(input_2)
+        data = np.vstack((data2, data))
+    """
+    #per sim 03 bot - raccordo
+    #data = extrapolate_phi_in(data, 40,50)
+
+
+#interp_r = int_all(all, n=300, i=1)
+#plot_all_phi_r(interp_r, "interp", dt)
+
+#all[1] = extrapolate_phi_in(all[1], 30, 48,30,53)
+#all[2] = extrapolate_phi_in(all[2], 50, 75, 50)
+"""
+for i, data in enumerate(all):
+    #data = data[data[:, 0] >= 40]
+    #data = fill_phi_gaps(data)
+    data = filter_bads(data, -10, 30)
+    #data = filter_bads(data, 100, 135)
+
+    if i*dt == 10:
+        #data = extrapolate_phi_in(data, 77, 100)
+        #data = extrapolate_phi_in(data, 45, 60)
+        data = extrapolate_phi_in(data, 30, 50)
+
+    if i*dt == 0:
+        data = extrapolate_phi_in(data, 30, 50)
+
+    elif i*dt == 5:
+        data = extrapolate_phi_in(data, 20, 23)
+    #int_data = interp(data, np.min(data[:,0]), np.max(data[:,0]), 200, 0)
+
+    all[i] = data
+#"""
+
+
+#######from mod_img
+    """
+    bin_centers, radial_mean, r_bin_index = radial_average_masked(image, r, mask=mask)
+    # Interpolate radial_mean to each valid pixel's radius (use bin centers)
+    # Use np.interp on radii for masked pixels only.
+    valid_r = r[mask]
+    # For interpolation we need to skip bins that are nan. Create arrays of valid bins:
+    valid_bins = ~np.isnan(radial_mean)
+    if valid_bins.sum() < 2:
+        raise RuntimeError("Not enough radial bins with data to interpolate.")
+    interp_centers = bin_centers[valid_bins]
+    interp_values = radial_mean[valid_bins]
+
+    interp_values_for_pixels = np.interp(valid_r, interp_centers, interp_values,
+                                         left=np.nan, right=np.nan)
+    radial_img = np.full_like(image, np.nan, dtype=float)
+    radial_img[mask] = interp_values_for_pixels
+    #"""

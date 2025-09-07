@@ -42,7 +42,7 @@ def read_fits(arg):
     label = "Flux [W m⁻² pixel⁻¹]"
     pixel_size = 320/image.shape[0] # AU
 
-    dif = mod_img(image, pixel_size)
+    dif = mod_img(image)
     rot = np.rot90(dif, k=1)
     #image = deproject_image(image, 0)
 
@@ -55,8 +55,12 @@ def read_pix(arg):
     image = np.loadtxt(path, dtype=float)
     label = "log column density [g Cm⁻²]"
     pixel_size = 320/image.shape[0]  # AU
+    if arg[1]=="01" and arg[2]=="0":
+        vmin = 2
+    else:
+        vmin = None
 
-    return  outfile, image, label, pixel_size, None
+    return  outfile, image, label, pixel_size, vmin
 
 
 #############
@@ -114,8 +118,7 @@ def read_R_data_file(filename):
 #############
 #===========================================================
 ############# function to filter out the constant pattern
-def mod_img(image, px):
-    #"""
+def mod_img(image):
     #compute the radial profile
     ny, nx = image.shape
     y, x = np.indices((ny, nx))   # full 2D coordinate grids
@@ -125,28 +128,10 @@ def mod_img(image, px):
     r_max_disk = (min(nx, ny) *np.sqrt(2) // 2)  # or another definition of disk radius
     mask = r <= r_max_disk
 
-    #"""
     bin_centers, radial_mean = radial_average(image[mask], r[mask])
     # Interpolate values back to all r
     values = np.interp(r.ravel(), bin_centers, radial_mean, left=np.nan, right=np.nan)
     radial_img = values.reshape(image.shape)
-    """
-    bin_centers, radial_mean, r_bin_index = radial_average_masked(image, r, mask=mask)
-    # Interpolate radial_mean to each valid pixel's radius (use bin centers)
-    # Use np.interp on radii for masked pixels only.
-    valid_r = r[mask]
-    # For interpolation we need to skip bins that are nan. Create arrays of valid bins:
-    valid_bins = ~np.isnan(radial_mean)
-    if valid_bins.sum() < 2:
-        raise RuntimeError("Not enough radial bins with data to interpolate.")
-    interp_centers = bin_centers[valid_bins]
-    interp_values = radial_mean[valid_bins]
-
-    interp_values_for_pixels = np.interp(valid_r, interp_centers, interp_values,
-                                         left=np.nan, right=np.nan)
-    radial_img = np.full_like(image, np.nan, dtype=float)
-    radial_img[mask] = interp_values_for_pixels
-    #"""
 
     diff = image-radial_img
 
