@@ -33,7 +33,7 @@ R, vm, v_std = monte_carlo_velocities(all, sigma_R=1.5, dt=dt, n_mc=1000)
 interp_data = int_all(all, n=270, i=0)
 #plot_all_phi_r(interp_data, "interp", dt)
 smooth_data = smooth(interp_data, 1)
-#plot_all_phi_r(smooth_data, "smooth", dt)
+plot_all_phi_r(smooth_data, "smooth", dt)
 vel = compute_velocity(smooth_data, dt)
 vm = np.array([v[:,1] for v in vel])  # drop the R coord
 

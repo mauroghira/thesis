@@ -5,59 +5,75 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
+from f_interp import *
+from f_fits import *
 from f_read import *
 
 titlefontsize, labelfontsize, tickfontsize, legfontsize = 20, 16, 14, 12
 markersize, linewidth = 6, 1
 
-if len(sys.argv) != 4:
-    print("Usage: python plot_rphi.py ratio arm dt")
+if len(sys.argv) != 3:
+    print("Usage: python plot_v_5years.py ratio arm")
     sys.exit(1)
 
-dt = int(sys.argv[3])
+dt = 5
 ratio = sys.argv[1]
 arm = sys.argv[2]
 zero, rr = ratio.rsplit("0", 1)
 
-outfile = "~/thesis/img_ts/"+ratio+"_phi_map"
+outfile = "~/thesis/img_ts/"+ratio+"_vel_5"
 base = os.path.expanduser("~/thesis/Spiral_pattern/"+ratio+"/results/")
-fine = "_int_"+str(dt)+"_phi.txt"
+fine = "_int_"+str(dt)+"_vel.txt"
 
 #add data from simulations
 if arm == "top":
     file = base+"sim_top"+fine
 else:
     file = base+"sim_bot"+fine
-Rs, phis = read_R_data_file(file)
+Rs, vms, v_stds = load_vel(file)
 
 #add data from observations
 if arm == "top":
     file = base+"mc_top"+fine
 else:
     file = base+"mc_bot"+fine
-Ro, phio = read_R_data_file(file)
-
+Ro, vmo, v_stdo = load_vel(file)
 
 fig, axs = plt.subplots(1, 2, figsize=(17, 9))
 title = 'q=0.'+str(rr)+fr', '+arm+' arm'
 
-#èòot simulation datta
-for i, p in enumerate(phis):
+for j, v in enumerate(vms):
+    #plot simulation datta
     ax = axs[0]
     R = Rs
+    v_sim = np.asarray(v).flatten()
 
+    label = fr"Year {j*dt} $\rightarrow$ {j*dt+dt}"
+    if j*dt ==10:
+        label = fr"Year 0 $\rightarrow$ 10"
     # line for the velocities
-    ax.plot(R, p, '-', linewidth=linewidth, label=f"Year {i*dt}")
+    ax.plot(R, v_sim, '-', linewidth=linewidth, label=label)
 
-#plot observation data
-for i, p in enumerate(phio):
+radiiS, omegaK_yearS = kepler(Rs)
+ax.plot(radiiS, omegaK_yearS, '.', label="Keplerian angular velocity")
+
+#plot pseudoobservations
+for j, v in enumerate(vmo):
     ax = axs[1]
     R = Ro
+    v_obs = np.asarray(v).flatten()
 
+    label = fr"Year {j*dt} $\rightarrow$ {j*dt+dt}"
+    if j*dt ==10:
+        label = fr"Year 0 $\rightarrow$ 10"
     # line for the velocities
-    ax.plot(R, p, '-', linewidth=linewidth, label=f"Year {i*dt}")
+    ax.plot(R, v_obs, '-', linewidth=linewidth, label=label)
 
-ax_lab = r"$\varphi$ [radians]"
+radiiO, omegaK_yearO = kepler(Ro)
+ax.plot(radiiO, omegaK_yearO, '.', label="Keplerian angular velocity")
+
+
+ax_lab = r"$\frac{d\phi}{dt} = \Omega(R)$ [radians/year]"
 for i, ax in enumerate(axs):
     ax.set_xlabel('R [AU]', size=labelfontsize)
     ax.set_ylabel(ax_lab, size=labelfontsize)
@@ -69,18 +85,9 @@ for i, ax in enumerate(axs):
         ha="center", va="top",
         fontsize=labelfontsize
     )
-    # Set y ticks in multiples of π/2 using ax
-    ax.yaxis.set_major_locator(ticker.MultipleLocator(base=np.pi/2))
-    ax.yaxis.set_major_formatter(
-        ticker.FuncFormatter(
-            lambda val, pos: (
-                f"{int(round(val/np.pi))}π" if np.isclose(val % np.pi, 0) else f"{val/np.pi:.1f}π"
-            )
-        )
-    )
-    
     ax.legend(fontsize=legfontsize)
     ax.grid(True)
+
 
 plt.savefig(os.path.expanduser(outfile+".pdf"))
 plt.savefig(os.path.expanduser(outfile+".png"), bbox_inches="tight")

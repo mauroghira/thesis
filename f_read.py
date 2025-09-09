@@ -124,8 +124,8 @@ def load_vel(filename):
     r = data[:, 0]
     ncols = (data.shape[1] - 1) // 2  # number of vm (and vstd) columns
 
-    vm = data[:, 1:1+ncols]
-    vstd = data[:, 1+ncols:1+2*ncols]
+    vm = data[:, 1:1+ncols].T
+    vstd = data[:, 1+ncols:1+2*ncols].T
 
     return r, vm, vstd
 
