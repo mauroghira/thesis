@@ -804,3 +804,29 @@ for i, data in enumerate(all):
     radial_img = np.full_like(image, np.nan, dtype=float)
     radial_img[mask] = interp_values_for_pixels
     #"""
+
+
+
+"""for fitting velocities an plotting
+outfile = "~/thesis/img_ts/"+ratio+"_vel_fits"
+base = "~/thesis/Spiral_pattern/"+ratio+"/results/"
+fine = "_"+arm+"_int_"+str(dt)+"_vel.txt"
+
+Rs, vvs = [], []
+
+file = os.path.expanduser(base+"sim"+fine)
+R, vels = read_R_data_file(file)
+Rs.append(R)
+vvs.append(vels)
+
+file = os.path.expanduser(base+"mc"+fine)
+R, vels = read_R_data_file(file)
+Rs.append(R)
+vvs.append(vels)
+
+...
+
+for i, v in enumerate(vvs):
+    axs[i].plot(Rs[i], vvs[i][0], '-', lw=linewidth, label="Computed velocity")
+    
+"""

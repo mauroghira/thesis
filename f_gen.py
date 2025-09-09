@@ -105,7 +105,7 @@ def chi_sq(x, y, model, popt, sigma):
     # chi quadro
     res = y - model(x, *popt)
     chi2_val = np.sum((res / sigma)**2)
-    dof = len(x) - len(popt)
+    dof = x.size - len(popt)
     chi2_red = chi2_val / dof
     p_value = chi2.sf(chi2_val, dof)
 

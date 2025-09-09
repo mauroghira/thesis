@@ -47,7 +47,7 @@ exts = [[-(image.shape[1]-1) * 160/image.shape[1], (image.shape[1]-1) * 160/imag
 vmins = [None, -1e-21]
 
 #thi will be an extraindex to distinguish bottom and top arm
-colors = ["lime", "lightblue"]
+colors = ["yellow", "blue"]
 
 # here the index wil then run on the columns of imgs
 incipit = ["sim", "mc"]
@@ -74,7 +74,7 @@ ncols = 2
 fig = plt.figure(figsize=(18,18))
 
 # margins
-left, right, bottom, top = 0.08, 0.98, 0.03, 0.98
+left, right, bottom, top = 0.08, 0.98, 0.03, 0.97
 nrows, ncols = len(imgs), 2
 
 # --- grid sizing ---
@@ -136,15 +136,11 @@ for i in range(nrows):
             ax.set_ylabel("y [AU]", size=labelfontsize)
             ax.tick_params(axis="y", labelsize=tickfontsize)
 
-        ax.legend(fontsize=legfontsize)
+        legend = ax.legend(fontsize=legfontsize, facecolor="black", edgecolor="none", framealpha=0.3)
+        ax.set_aspect("equal", "box")
+        for text in legend.get_texts():
+            text.set_color("white")   # set legend text color
 
-# glue columns
-for i in range(nrows):
-    for j in range(1, ncols):
-        pos_prev = axs[i, j-1].get_position()
-        pos_curr = axs[i, j].get_position()
-        axs[i, j].set_position([pos_prev.x1, pos_curr.y0,
-                                pos_curr.width, pos_curr.height])
 
 # -------------------------
 # single colorbar per column, placed above the first-row axes

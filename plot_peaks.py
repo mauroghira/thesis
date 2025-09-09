@@ -86,9 +86,12 @@ for i, ax in enumerate(axs):
         bbox=dict(facecolor="black", alpha=0.3, edgecolor="none", pad=2)
     )
 
-    ax.legend(fontsize=legfontsize)
+    legend = ax.legend(fontsize=legfontsize, facecolor="black", edgecolor="none", framealpha=0.3)
+    ax.set_aspect("equal", "box")
+    for text in legend.get_texts():
+        text.set_color("white")   # set legend text color
 
-axs[0].set_ylabel("Y [AU]", size=labelfontsize)
+axs[0].set_ylabel("y [AU]", size=labelfontsize)
 
 axs[1].spines["left"].set_visible(False)
 pos0 = axs[0].get_position()

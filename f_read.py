@@ -114,6 +114,21 @@ def read_R_data_file(filename):
     ys = [data[:, i] for i in range(1, data.shape[1])]
     return x, ys
 
+def load_vel(filename):
+    """
+    Load velocity file saved with save_vel:
+    R, vm1 ... vmN, vstd1 ... vstdN
+    """
+    data = np.loadtxt(filename)
+
+    r = data[:, 0]
+    ncols = (data.shape[1] - 1) // 2  # number of vm (and vstd) columns
+
+    vm = data[:, 1:1+ncols]
+    vstd = data[:, 1+ncols:1+2*ncols]
+
+    return r, vm, vstd
+
 
 #############
 #===========================================================

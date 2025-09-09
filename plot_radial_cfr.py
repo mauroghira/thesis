@@ -10,8 +10,8 @@ from f_read import *
 titlefontsize, labelfontsize, tickfontsize=20, 16, 14
 markersize, linewidth = 6, 1
 
-if len(sys.argv) != 4:
-    print("Usage: python plotting.py ratio year rad(y/n)")
+if len(sys.argv) != 3:
+    print("Usage: python plotting.py ratio year")
     sys.exit(1)
 
 ratio = sys.argv[1]
@@ -19,7 +19,6 @@ out = "~/thesis/img_ts/"
 
 zero, rr = ratio.rsplit("0", 1)
 y = sys.argv[2]
-rad = sys.argv[3]
 base = "~/thesis/Spiral_pattern/"+ratio
 
 labels = "Flux [W/(m² pixel)]"
@@ -69,7 +68,7 @@ for i, ax in enumerate(axs):
         bbox=dict(facecolor="black", alpha=0.3, edgecolor="none", pad=2)
     )
 
-axs[0].set_ylabel("Y [AU]", size=labelfontsize)
+axs[0].set_ylabel("y [AU]", size=labelfontsize)
 
 axs[1].spines["left"].set_visible(False)
 pos0 = axs[0].get_position()

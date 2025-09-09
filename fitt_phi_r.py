@@ -10,7 +10,7 @@ from f_save import *
 from f_fits import *
 
 if len(sys.argv) != 5:
-    print("Usage: python fitting.py ratio subdir arm dt")
+    print("Usage: python fit_phi_r.py ratio subdir arm dt")
     sys.exit(1)
 
 base = os.path.expanduser("~/thesis/Spiral_pattern/")
@@ -71,10 +71,10 @@ if subdir == "sim_ana":
     file = base + ratio + "/results/sim_" + arm + "_fit_"+str(dt)+"_phi.txt"
 else:
     file = base + ratio + "/results/mc_" + arm + "_fit_"+str(dt)+"_phi.txt"
-save_rphi_all(interp_data, file)
+#save_rphi_all(interp_data, file)
 
 if subdir == "sim_ana":
     file = base + ratio + "/results/sim_" + arm + "_fit_"+str(dt)+"_vel.txt"
 else:
     file = base + ratio + "/results/mc_" + arm + "_fit_"+str(dt)+"_vel.txt"
-save_vel(vel, file)
+#save_vel(vel, file)

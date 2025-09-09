@@ -75,7 +75,7 @@ for i, ax in enumerate(axs):
         bbox=dict(facecolor="black", alpha=0.3, edgecolor="none", pad=2)
     )
 
-axs[0].set_ylabel("Y [AU]", size=labelfontsize)
+axs[0].set_ylabel("y [AU]", size=labelfontsize)
 
 axs[1].spines["left"].set_visible(False)
 pos0 = axs[0].get_position()

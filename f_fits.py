@@ -70,9 +70,10 @@ def resample_rphi(f_rphi, popt, r_min, r_max, phi_range, N=500):
 #===========================================================
 ############# function to fits velocity
 def fit_vel(r, omega, err, model):
-    popt, pcov = curve_fit(model, r, omega, maxfev=10000, sigma=err, absolute_sigma=True)
+    popt, pcov = curve_fit(model, r, omega, maxfev=10000, sigma=np.asarray(err).flatten(), absolute_sigma=True)
+    sigma = np.sqrt(r.size * np.diag(pcov))
 
     rsq = r_squared(omega, model(r, *popt))
     chi2, chired, p = chi_sq(r, omega, model, popt, err)
 
-    return rsq, chi2, chired, p , popt
+    return rsq, chi2, chired, p , popt, sigma
